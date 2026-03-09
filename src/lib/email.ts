@@ -1,8 +1,10 @@
 import { Resend } from 'resend'
-import { RESEND_API_KEY } from '$env/static/private'
+import { env } from '$env/dynamic/private'
 import { PUBLIC_SITE_URL } from '$env/static/public'
 
-const resend = new Resend(RESEND_API_KEY)
+function getResend() {
+	return new Resend(env.RESEND_API_KEY)
+}
 
 const FROM = 'SavBash <admin@savbash.com>'
 
@@ -48,7 +50,7 @@ interface RideEmailData {
 }
 
 export async function sendRideAnnouncement(ride: RideEmailData, subscribers: { email: string }[]) {
-	if (!RESEND_API_KEY || subscribers.length === 0) return
+	if (!env.RESEND_API_KEY || subscribers.length === 0) return
 
 	const rideUrl = `${PUBLIC_SITE_URL}/rides/${ride.id}`
 	const hareText = ride.hares.length > 0 ? ride.hares.join(', ') : 'TBD'
@@ -76,7 +78,7 @@ ${descPreview ? `<p style="margin:16px 0 0;color:#d1d5db;font-size:14px">${escap
 
 	// Resend batch API: send to all at once using BCC
 	try {
-		await resend.emails.send({
+		await getResend().emails.send({
 			from: FROM,
 			to: FROM,
 			bcc: emails,
@@ -98,7 +100,7 @@ interface MentionEmailData {
 }
 
 export async function sendMentionNotification(data: MentionEmailData) {
-	if (!RESEND_API_KEY) return
+	if (!env.RESEND_API_KEY) return
 
 	const commentUrl = `${PUBLIC_SITE_URL}/rides/${data.rideId}#comment-${data.commentId}`
 	const preview = data.commentBody.slice(0, 200)
@@ -119,7 +121,7 @@ In <strong style="color:#d1d5db">${escapeHtml(data.rideTitle)}</strong>
 `)
 
 	try {
-		await resend.emails.send({
+		await getResend().emails.send({
 			from: FROM,
 			to: data.mentionedEmail,
 			subject: `${data.mentionerName} mentioned you in ${data.rideTitle}`,
