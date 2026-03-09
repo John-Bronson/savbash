@@ -59,24 +59,51 @@ A blank SvelteKit app with Tailwind running locally and deployed on Netlify, wit
    - You'll write SQL here to create your tables. Supabase saves your query history, which is helpful.
 
 2. **Create the `profiles` table**
-   - Fields: `id` (UUID, primary key, references `auth.users`), `display_name` (text), `email` (text), `avatar_url` (text, nullable), `avatar_emoji` (text, nullable), `subscribed_to_emails` (boolean, default true), `notify_on_mention` (boolean, default true), `created_at` (timestamp)
+   - Fields: `id` (UUID, primary key, references `auth.users`), `christian_name` (text, NOT NULL — their real name), `bash_name` (text, nullable — their hash name/trail name), `email` (text), `role` (text, default 'user' — one of 'user', 'moderator', 'admin'), `avatar_url` (text, nullable), `avatar_emoji` (text, nullable), `subscribed_to_emails` (boolean, default true), `notify_on_mention` (boolean, default true), `created_at` (timestamp)
+   - `role` controls permissions. Four levels:
+     - **pending** — default for new signups. Completely locked out of the site until approved by an existing member. Can only see their own profile and set up their name/avatar while waiting.
+     - **user** — approved member. Can create rides, RSVP, comment, react, upload photos. Can edit/delete only their own stuff.
+     - **moderator** — can also delete any comment, delete any photo, and edit any user's profile (e.g. granting bash names). A few trusted members.
+     - **admin** — full control over everything. Eventually gets an admin panel for site maintenance. Only one or two people.
+   - Approving a user means changing their role from `pending` to `user`. To start, any approved user can do this; may be restricted to moderators later.
+   - The app should show a list of pending users to approved members so they can approve newcomers.
+   - `role` should only be changeable directly in the database or by an approved user (for pending→user) or admin (for other changes) — never exposed in the normal profile edit UI. Add a CHECK constraint to restrict values to the four valid options
+   - `christian_name` is required (their real/given name). `bash_name` is optional — earned over time as is hash tradition. When displaying a user, show their bash name if they have one, otherwise fall back to christian name
    - `avatar_url` and `avatar_emoji` are mutually exclusive — whichever the user last set is the one that's active. Store both so switching between them doesn't destroy the other
-   - Add a **unique constraint** on `display_name` — this is essential for the `@mention` system in Phase 6, which looks up users by display name. Without it, two users with the same name would both receive a mention intended for one of them. Enforce this at the database level and validate it in the profile setup UI with a friendly "that name is taken" message
+   - Add a **unique constraint** on `bash_name` — this is essential for the `@mention` system in Phase 6, which looks up users by name. The @mention system should match against bash name first, then christian name. Enforce uniqueness at the database level and validate it in the profile setup UI with a friendly "that name is taken" message
    - This table stores public user info. The `auth.users` table is Supabase's internal auth table — `profiles` is your app's extension of it
 
 3. **Create the `rides` table**
-   - Fields: `id` (UUID), `title`, `description`, `ride_date` (timestamp), `meeting_spot` (text), `distance_miles` (numeric), `difficulty` (text: easy/moderate/hard), `created_by` (UUID, references profiles), `created_at` (timestamp)
+   - Fields: `id` (UUID), `title`, `description`, `ride_date` (timestamp), `meeting_spot_name` (text — human-readable label like "Starbucks on Main St"), `meeting_spot_lat` (numeric, nullable), `meeting_spot_lng` (numeric, nullable), `image_url` (text, nullable — banner image for the event), `created_by` (UUID, references profiles), `created_at` (timestamp), `updated_at` (timestamp, nullable), `updated_by` (UUID, nullable, references profiles)
+   - `updated_at` and `updated_by` track the last edit — null means never edited. The UI can show "edited 2 hours ago by Dave" when these are set
+   - Coordinates are optional — if provided, the app can generate links to Google Maps (`https://www.google.com/maps?q=LAT,LNG`), Apple Maps, Waze, etc. If only a name is given, the meeting spot displays as plain text with no map link
+   - The UI should offer Google Places Autocomplete so users can search for a location and have the name + coordinates filled in automatically, but they can also just type a name manually
+   - This is a Hash House Harriers–style group: one or two "hares" lay a trail in flour/chalk and the pack follows. Hare assignments are stored in the separate `ride_hares` table (see step 3b)
+
+3b. **Create the `ride_hares` table**
+   - Fields: `id` (UUID), `ride_id` (references rides, cascade delete), `user_id` (UUID, nullable, references profiles), `name` (text, nullable), `created_at`
+   - Each ride has one or two hares. Each row represents one hare.
+   - Either `user_id` or `name` must be set (add a CHECK constraint: `user_id IS NOT NULL OR name IS NOT NULL`). Use `user_id` when the hare is a registered user on the site, or `name` as plain text for someone who isn't on the app yet (e.g. "Dave's friend Mike")
+   - If a `user_id` is set, the app should display their profile info (avatar, display name). If only `name` is set, just show the text.
+
+3c. **Create the `ride_photos` table**
+   - Fields: `id` (UUID), `ride_id` (references rides, cascade delete), `user_id` (references profiles), `photo_url` (text), `caption` (text, nullable), `created_at`
+   - This is the post-ride photo gallery — anyone who attended can upload photos after the event
+   - Photos are stored in a Supabase Storage bucket (see step 8)
 
 4. **Create the `rsvps` table**
    - Fields: `id` (UUID), `ride_id` (references rides), `user_id` (references profiles), `status` (text: going/maybe/not_going), `created_at`
    - Add a **unique constraint** on `(ride_id, user_id)` — one RSVP per person per ride. This prevents duplicates at the database level, which is cleaner than trying to handle it in your app code
 
 5. **Create the `comments` table**
-   - Fields: `id` (UUID), `ride_id` (references rides), `user_id` (references profiles), `body` (text), `created_at`
+   - Fields: `id` (UUID), `ride_id` (references rides), `user_id` (references profiles), `body` (text), `is_deleted` (boolean, default false), `deleted_at` (timestamp, nullable), `deleted_by` (UUID, nullable, references profiles), `created_at`, `updated_at` (timestamp, nullable), `updated_by` (UUID, nullable, references profiles)
+   - Comments use soft delete — setting `is_deleted = true` with `deleted_at` and `deleted_by`. The body and user are preserved in the database for admin review, but the UI shows "this comment was deleted" with no author or content visible
+   - `updated_at` and `updated_by` track the last edit — the UI can show "(edited)" next to the timestamp when a comment has been modified
+   - No hard delete — the RLS policy allows updates (for editing and soft-deleting) but not DELETE operations
 
 6. **Create the `reactions` table**
    - Fields: `id` (UUID), `comment_id` (references comments), `user_id` (references profiles), `emoji` (text — stores a single emoji character like "👍" or "🔥"), `created_at`
-   - Add a **unique constraint** on `(comment_id, user_id, emoji)` — one reaction of each type per person per comment. This means a user can react with both 👍 and 🔥 on the same comment, but can't double-tap the same emoji
+   - Add a **unique constraint** on `(comment_id, user_id)` — one reaction per person per comment. If a user picks a different emoji, it replaces their existing one (upsert). This keeps the UI simple — no stacking multiple emojis per person
    - This design is simple and flexible — you don't need to predefine which emojis are allowed
 
 7. **Create the `mentions` table**
@@ -86,24 +113,28 @@ A blank SvelteKit app with Tailwind running locally and deployed on Netlify, wit
    - `is_read` is the flag that drives the unread badge count in the nav bar — `false` by default, flipped to `true` when the user views the notification
    - Cascade delete from `comments` so that deleting a comment automatically cleans up its mention rows
 
-8. **Set up Supabase Storage for avatars**
-   - In the Supabase dashboard → Storage, create a new bucket called `avatars`
-   - Set it to **public** — avatar images are not sensitive and serving them publicly avoids needing signed URLs every time you render one
-   - Storage buckets have their own RLS policies separate from your database tables — add a policy allowing anyone to read from the `avatars` bucket, and only authenticated users to upload to a path matching their own user ID (e.g. `avatars/{user_id}/avatar.webp`)
+8. **Set up Supabase Storage buckets**
+   - In the Supabase dashboard → Storage, create three public buckets: `avatars`, `ride-images`, and `ride-photos`
+   - `avatars` — user profile pictures. RLS: anyone can read, authenticated users can upload to their own path (`avatars/{user_id}/avatar.webp`)
+   - `ride-images` — banner images set by hares when creating a ride. RLS: anyone can read, authenticated users can upload (`ride-images/{ride_id}/banner.webp`)
+   - `ride-photos` — post-ride gallery photos uploaded by attendees. RLS: anyone can read, authenticated users can upload (`ride-photos/{ride_id}/{user_id}/{filename}`)
+   - All three are public — no signed URLs needed for display
 
 9. **Set up the automatic profile creation trigger**
    - Write a Postgres function + trigger that fires when a new user signs up via Supabase Auth, automatically creating a corresponding row in your `profiles` table
    - This is a common Supabase pattern and there are good examples in their docs. It means you never have to manually create profile rows — it just happens
-   - **Note:** If you used Supabase's built-in option to auto-create this trigger when setting up your project, check what columns the generated `profiles` table has — it likely needs `display_name`, `avatar_url`, `avatar_emoji`, `subscribed_to_emails`, and `notify_on_mention` added manually to match the schema above
+   - **Note:** If you used Supabase's built-in option to auto-create this trigger when setting up your project, check what columns the generated `profiles` table has — it likely needs `christian_name`, `bash_name`, `role`, `avatar_url`, `avatar_emoji`, `subscribed_to_emails`, and `notify_on_mention` added manually to match the schema above
 
 10. **Enable Row Level Security (RLS) on all tables**
    - RLS is Supabase's system for controlling who can read/write what. Think of it as database-level permissions.
    - Turn it ON for every table (it's off by default)
    - Write policies for each table. Here's the general logic:
-     - **profiles**: Anyone can read. Only the owner can update their own profile.
-     - **rides**: Anyone can read. Only authenticated users can insert. Only the creator can update/delete.
-     - **rsvps**: Anyone can read. Only authenticated users can insert/update/delete their own RSVPs.
-     - **comments**: Anyone can read. Only authenticated users can insert. Only the author can delete.
+     - **profiles**: Anyone can read. Owner can update their own profile. Moderators and admins can update any profile (e.g. granting bash names). Only admins can change the `role` field.
+     - **rides**: Anyone can read. Only authenticated users can insert. The ride creator, any hare on the ride, or a moderator/admin can update/delete.
+     - **ride_hares**: Anyone can read. The ride creator or a moderator/admin can insert/update/delete hares for a ride.
+     - **ride_photos**: Anyone can read. Only authenticated users can insert. The uploader, a moderator, or an admin can delete.
+     - **rsvps**: Anyone can read. Only authenticated users can insert/update/delete their own RSVPs. Admins can remove any RSVP.
+     - **comments**: Anyone can read. Only authenticated users can insert. The author, a moderator, or an admin can delete.
      - **reactions**: Anyone can read. Only authenticated users can insert their own reactions. Only the owner can delete their own reaction.
      - **mentions**: Only the mentioned user can read their own rows. Only authenticated server-side code inserts rows (users never write directly). Users can update only their own rows, and only the `is_read` field. Cascade delete from comments handles cleanup automatically.
    - RLS means even if someone calls your API directly, they can't access data they shouldn't
@@ -130,10 +161,17 @@ A fully designed database with proper relationships, constraints, security rules
    - Add both localhost and your Netlify URL to the allowed redirect URLs list
    - Magic links are enabled by default — no extra config needed
 
-2. **Customize the magic link email (optional but nice)**
+2. **Customize the magic link email**
    - In Supabase dashboard → Authentication → Email Templates
    - Edit the "Magic Link" template with your group's name and a friendly message
    - Keep the `{{ .ConfirmationURL }}` placeholder — that's the actual link
+
+2b. **Set up custom SMTP so auth emails come from your domain**
+   - By default, Supabase sends auth emails from `noreply@mail.app.supabase.io`. To send from `admin@savbash.com` instead, configure a custom SMTP provider.
+   - In Supabase dashboard → Project Settings → Authentication → SMTP Settings, enable "Custom SMTP" and enter your SMTP credentials.
+   - Resend (which you'll set up in Phase 7) can serve as your SMTP provider — it provides SMTP credentials on your verified domain. This means both auth emails and app emails (ride announcements, mention notifications) come from the same `@savbash.com` address.
+   - Steps: (1) verify `savbash.com` in Resend, (2) get SMTP credentials from Resend dashboard, (3) enter them in Supabase SMTP settings, (4) set sender address to `admin@savbash.com`.
+   - This can wait until Phase 7 when you set up Resend — the default Supabase emails work fine for development.
 
 3. **Build the sign-in page**
    - Route: `/login`
@@ -177,13 +215,13 @@ Full authentication working end-to-end. You can sign in via email, click the lin
 
 1. **Homepage (`/`)**
    - Fetch upcoming rides from Supabase (ordered by date, `ride_date > now()`)
-   - Display each as a card: title, date/time, meeting spot, difficulty badge, distance, and RSVP count
+   - Display each as a card: title, date/time, meeting spot, hare name(s), banner image, and RSVP count
    - Include a "Past Rides" section below the fold showing the last 5-10 rides
    - Add a prominent "Post a Ride" button in the header (only shows when logged in)
    - In SvelteKit, data fetching happens in a `+page.server.ts` load function that runs on the server before the page renders — this is the natural SvelteKit pattern and gives you fast initial page loads with no client-side loading spinners
 
 2. **Individual ride page (`/rides/[id]`)**
-   - Full ride details: all fields, a map embed of the meeting spot (Google Maps embed or a static Mapbox map work well)
+   - Full ride details: all fields, with the meeting spot name linked to Google Maps using the stored coordinates. Optionally embed a small static map preview
    - **RSVP section**: three buttons — "I'm In", "Maybe", "Can't Make It"
    - Show current RSVP status highlighted if the user has already RSVPed
    - Display an attendee grid: small avatars or initials of everyone who said they're going
@@ -200,7 +238,8 @@ Full authentication working end-to-end. You can sign in via email, click the lin
    - This is a polish feature — it works fine without it, but it's a fun one to add
 
 5. **Create a ride page (`/rides/new`)**
-   - A form with fields for all the `rides` columns: title, date, time, meeting spot, distance, difficulty, description
+   - A form with fields for all the `rides` columns: title, date, time, meeting spot, description, and a banner image upload
+   - A "Hares" section where the creator can add one or two hares — either by searching for a registered user or typing a name for someone not on the app
    - The description field supports Markdown — add a small note below it ("Formatting supported: **bold**, *italic*, bullet lists") and use `marked` to render it as HTML on the ride page. Install it with `npm install marked`. The `@tailwindcss/typography` plugin you installed gives the rendered output clean styling for free via the `prose` class
    - On submit, insert into Supabase and redirect to the new ride's page
    - Validate inputs client-side before submitting (required fields, date must be in the future, etc.)
@@ -361,7 +400,7 @@ Comments, @mentions, emoji reactions, and a notifications inbox are fully workin
 
 2. **Design your ride announcement email**
    - Resend supports sending HTML emails — write a simple HTML email template as a string in your SvelteKit server code, or use a library like `mjml` for a more maintainable responsive email layout
-   - The email should include: ride title, date/time, meeting spot, difficulty/distance, a short description, and a big "I'm In" button that links directly to the ride's RSVP page
+   - The email should include: ride title, date/time, meeting spot, hare name(s), a short description, the banner image, and a big "I'm In" button that links directly to the ride's RSVP page
    - Keep it clean and mobile-friendly — most people will read it on their phone
    - Include a one-click unsubscribe link at the bottom
 

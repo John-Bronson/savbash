@@ -1,0 +1,260 @@
+# SavBash Work Log
+
+A record of everything done during development, so you can review and learn from it later.
+
+---
+
+## Session 1 — 2026-03-08: Database Schema Design
+
+### What we did
+
+1. **Discussed the implementation plan** — Reviewed the 8-phase plan in `.claude/cycling-site-implementation-plan.md` covering project setup through launch.
+
+2. **Customized the rides table for hash-style riding**
+   - Removed `distance_miles` and `difficulty` fields (not relevant to hare-and-hounds format)
+   - Added `image_url` for a banner image on each ride
+   - Created a `ride_hares` junction table for 1-2 hares per ride, supporting both registered users (`user_id`) and non-members (`name` as plain text)
+   - Created a `ride_photos` table for post-ride photo galleries
+
+3. **Replaced `display_name` with hash-style names**
+   - `christian_name` (required) — real/given name
+   - `bash_name` (optional, unique) — hash name earned over time
+   - Display logic: show bash name if set, fall back to christian name
+
+4. **Changed reactions to one-per-person**
+   - Unique constraint changed from `(comment_id, user_id, emoji)` to `(comment_id, user_id)`
+   - Picking a new emoji replaces your old one via upsert
+
+5. **Added map-linkable locations**
+   - Replaced `meeting_spot` (text) with `meeting_spot_name` + `meeting_spot_lat`/`meeting_spot_lng`
+   - Coordinates are optional — when present, the app generates Google Maps/Apple Maps/Waze links
+   - Plan includes Google Places Autocomplete for easy location picking in the UI
+
+6. **Added role-based permissions**
+   - Replaced boolean `is_admin` with `role` field: `user`, `moderator`, `admin`
+   - Updated all RLS policies to account for roles
+   - Hares can edit/delete rides they're haring
+   - Moderators can delete any comment/photo, edit any profile
+   - Admins get full control (admin panel planned for later)
+
+7. **Added edit tracking on rides and comments**
+   - `updated_at` and `updated_by` columns (both nullable — null means never edited)
+   - UI can show "(edited)" or "edited 2 hours ago by Dave"
+
+8. **Added soft delete on comments**
+   - `is_deleted`, `deleted_at`, `deleted_by` columns
+   - Body and author preserved in DB for admin review
+   - UI shows "this comment was deleted" with no author or content visible
+   - No hard DELETE — soft delete is done via UPDATE
+
+9. **Added database indexes**
+   - 11 indexes on all foreign keys plus `rides.ride_date`
+   - Prevents full table scans as data grows (e.g. "get all comments for this ride")
+
+10. **Set up Supabase CLI**
+    - Installed via npm (`supabase` package)
+    - Ran `npx supabase init` to create the `supabase/` directory with `config.toml`
+    - Ran `npx supabase link --project-ref pdszhutifwllfwjsxfkv` to connect to the remote project
+    - Wrote the full schema as a migration file at `supabase/migrations/20260308000000_initial_schema.sql`
+
+### Key concepts introduced
+
+- **Junction tables** — `ride_hares` is a separate table linking rides to hares, rather than embedding hare data in the rides table. This is the SQL equivalent of an embedded array in MongoDB.
+- **Foreign keys** — columns that reference an `id` in another table, enforced by the database so references are always valid.
+- **CHECK constraints** — rules the database enforces on column values (e.g. role must be one of three values, ride_hares must have either user_id or name).
+- **Unique constraints** — prevent duplicate data (e.g. one RSVP per person per ride).
+- **Cascade deletes** — when a parent row is deleted, child rows are automatically cleaned up (e.g. deleting a ride removes its comments, RSVPs, photos, etc.).
+- **RLS (Row Level Security)** — Supabase's permission system at the database level. Policies control who can read/write what, even if someone bypasses the UI.
+- **Indexes** — speed up queries by letting the database quickly find rows matching a condition, rather than scanning every row.
+- **Migrations** — SQL files that define schema changes, run in order. Keeps the database structure versioned and reproducible.
+- **Soft delete** — marking a row as deleted rather than removing it, so data is preserved for review.
+
+### Files modified
+- `.claude/cycling-site-implementation-plan.md` — updated rides table, added ride_hares/ride_photos/storage, updated RLS policies, added edit tracking and soft delete
+- `CLAUDE.md` — updated schema summary and key patterns sections
+- `supabase/migrations/20260308000000_initial_schema.sql` — created (full schema, RLS, indexes, storage buckets, triggers)
+
+11. **Pushed the initial migration to Supabase**
+    - Ran `npx supabase db push` — all tables, RLS, indexes, triggers, and storage buckets are now live
+    - Generated TypeScript types at `src/lib/database.types.ts` via `npx supabase gen types typescript`
+
+12. **Added `pending` role for new signups**
+    - New users default to `pending` instead of `user`
+    - Pending users are completely locked out — RLS policies block them from seeing rides, comments, RSVPs, photos, reactions, everything
+    - They can still see profiles (needed for the approval list UI) and update their own profile (to set up name/avatar while waiting)
+    - Approving a user = changing their role from `pending` to `user`
+    - Created a second migration: `supabase/migrations/20260308000001_add_pending_role.sql`
+    - This demonstrates how schema changes work after the initial setup: you write a new migration file that alters the existing schema, then push it
+
+13. **Created this work log**
+    - `.claude/work-log.md` — a running record of everything done, with key concepts explained
+    - Added a reminder to `CLAUDE.md` so future sessions keep updating it
+
+### Key concepts introduced (continued)
+
+- **Incremental migrations** — rather than editing the original migration file after it's been pushed, you create a new migration that alters the existing schema. Migrations run in order, so the database ends up in the right state. This is why the pending role change is a separate file from the initial schema.
+
+### Files modified (continued)
+- `supabase/migrations/20260308000001_add_pending_role.sql` — created (adds pending role, updates RLS)
+- `src/lib/database.types.ts` — regenerated with updated schema
+- `.claude/work-log.md` — created
+- `.claude/cycling-site-implementation-plan.md` — updated role descriptions
+- `CLAUDE.md` — updated role info, added work log reminder
+
+---
+
+## Session 1 (continued) — Phase 3: Authentication
+
+### What we did
+
+1. **Installed `@supabase/ssr`** — This package is needed for server-side Supabase auth in SvelteKit. The original `@supabase/supabase-js` only works in the browser; `@supabase/ssr` creates server clients that manage session cookies properly.
+
+2. **Replaced the browser-only Supabase client**
+   - `src/lib/supabaseClient.ts` now uses `createBrowserClient` from `@supabase/ssr` (instead of `createClient` from `@supabase/supabase-js`), typed with the `Database` types
+   - This client is for interactive UI in Svelte components (e.g. the sign-out button, the magic link form)
+
+3. **Created `src/hooks.server.ts`** — This is the core of auth. It runs on every request and:
+   - Creates a server-side Supabase client using `createServerClient` with cookie handling
+   - Provides a `safeGetSession()` function that validates the session (calls `getUser()` to verify the JWT isn't tampered with)
+   - Fetches the user's profile from the `profiles` table
+   - Redirects unauthenticated users to `/login`
+   - Redirects users with no christian name to `/profile/setup` (first-time setup)
+   - Redirects pending users to `/pending` (waiting for approval)
+   - Sets `locals.session`, `locals.user`, `locals.profile`, and `locals.supabase` so any page can access them
+
+4. **Updated `src/app.d.ts`** — Extended the `App.Locals` interface so TypeScript knows about `session`, `user`, `profile`, and `supabase` on `locals`. This is SvelteKit's way of passing per-request data through the app.
+
+5. **Created `src/routes/+layout.server.ts`** — A root layout load function that passes `session`, `user`, and `profile` to all pages. This means every page can access auth state via `data`.
+
+6. **Built the nav bar** (`src/routes/+layout.svelte`)
+   - Shows the user's bash name (or christian name as fallback) and a "Sign Out" button when logged in
+   - Shows a "Sign In" link when logged out
+   - Uses Tailwind for styling
+
+7. **Built the login page** (`src/routes/login/+page.svelte`)
+   - Email input, "Send Magic Link" button
+   - Calls `supabase.auth.signInWithOtp()` which sends the magic link email
+   - Shows a confirmation message after sending
+   - Error handling for failed sends
+
+8. **Built the auth callback route** (`src/routes/auth/callback/+server.ts`)
+   - A server-only route (no UI, just logic)
+   - When a user clicks the magic link in their email, Supabase redirects them here with a `code` parameter
+   - Exchanges the code for a session, then redirects to the homepage
+   - This is only ~10 lines of code
+
+9. **Built the profile setup page** (`src/routes/profile/setup/`)
+   - First-time onboarding: christian name (required) + bash name (optional)
+   - Uses a SvelteKit form action for the submission — this means it works even without JavaScript (progressive enhancement)
+   - Server-side validation: checks that christian name is provided, checks bash name uniqueness
+   - On success, redirects to homepage
+
+10. **Built the pending page** (`src/routes/pending/+page.svelte`)
+    - Friendly waiting screen for unapproved users
+    - Shows their name and a sign-out button
+    - Bike emoji for personality
+
+11. **Built the approval flow** (`src/routes/+page.server.ts` and `+page.svelte`)
+    - Homepage shows a list of pending users to any approved member
+    - Each pending user has an "Approve" button
+    - The approve action updates their role from `pending` to `user`
+    - Uses a SvelteKit form action
+
+### Key concepts introduced
+
+- **`hooks.server.ts`** — SvelteKit's middleware. Runs on every request before any page loads. This is where you handle auth, set up the request context, and redirect unauthorized users. Similar to middleware in Express or Next.js.
+- **`locals`** — SvelteKit's per-request context object. Data set on `locals` in hooks is available in any page's `load` function or form action. It only lives for the duration of one request.
+- **Server client vs browser client** — The server client (`createServerClient`) manages cookies and runs on the server. The browser client (`createBrowserClient`) runs in the browser for interactive features. Both talk to the same Supabase project but serve different purposes.
+- **`safeGetSession()`** — `getSession()` reads from the JWT stored in the cookie, which could be tampered with. `getUser()` makes a round-trip to Supabase to verify the user actually exists. Using both together is the secure pattern.
+- **Form actions** — SvelteKit's way of handling form submissions on the server. The form posts to the same page, the server processes it, and returns data back. Works without JavaScript (progressive enhancement) and integrates with the `use:enhance` directive for a smooth SPA-like experience when JS is available.
+- **`use:enhance`** — A SvelteKit directive that upgrades a regular HTML form to submit via fetch instead of a full page navigation. The form still works without JS, but with JS it's smoother.
+- **Layout load functions** — `+layout.server.ts` runs before any page under that layout. Data returned from it is available to all child pages. This is how we make auth state accessible everywhere.
+
+### Files created/modified
+- `src/hooks.server.ts` — created (session management, route protection, pending user handling)
+- `src/app.d.ts` — updated (added Locals types for session, user, profile, supabase)
+- `src/lib/supabaseClient.ts` — updated (switched to `createBrowserClient` from `@supabase/ssr`)
+- `src/routes/+layout.server.ts` — created (passes auth state to all pages)
+- `src/routes/+layout.svelte` — updated (nav bar with auth state)
+- `src/routes/+page.server.ts` — replaced (pending user list + approve action, removed instruments demo)
+- `src/routes/+page.svelte` — replaced (homepage with pending user approval, removed instruments demo)
+- `src/routes/login/+page.svelte` — created (magic link login form)
+- `src/routes/auth/callback/+server.ts` — created (magic link token exchange)
+- `src/routes/profile/setup/+page.server.ts` — created (profile setup form action)
+- `src/routes/profile/setup/+page.svelte` — created (profile setup UI)
+- `src/routes/pending/+page.svelte` — created (pending approval waiting screen)
+
+---
+
+## Session 1 (continued) — Dark Theme + Phase 4: Rides & RSVPs
+
+### What we did
+
+1. **Switched to dark theme**
+   - Set `color-scheme: dark` on `<html>` and `bg-gray-950 text-gray-100` on `<body>` in `layout.css`
+   - Updated all existing components (nav, login, profile setup, pending, homepage) to use dark palette
+   - Dark palette convention: `gray-950` page bg, `gray-900` surfaces, `gray-800` inputs/cards, `gray-700` borders, `gray-100` primary text, `gray-400` secondary text
+
+2. **Built the homepage** (`/`)
+   - Fetches upcoming rides (ride_date > now, sorted ascending) and past rides (last 10, sorted descending)
+   - Each ride card shows: title, date/time, meeting spot, hare names, and RSVP counts (going + maybe)
+   - "Post a Ride" button in the header for logged-in users
+   - Pending user approval section still at the bottom
+
+3. **Built the create ride page** (`/rides/new`)
+   - Form with: title, date, time, meeting spot, description (Markdown supported)
+   - Hare picker with two modes: select a registered member from a dropdown, or type a name for someone not on the app
+   - "Add second hare" button that reveals a second hare picker
+   - Hidden lat/lng fields ready for Google Places Autocomplete later
+   - Server-side form action inserts the ride then inserts hare rows, redirects to the new ride page
+
+4. **Built the individual ride page** (`/rides/[id]`)
+   - Full ride details with Markdown description rendered via `marked` + Tailwind `prose-invert` for dark theme typography
+   - Meeting spot links to Google Maps when coordinates are available
+   - Shows edit history ("edited [date] by [name]") when a ride has been updated
+   - Three RSVP buttons: "I'm In", "Maybe", "Can't Make It" — with optimistic UI updates (button highlights instantly before server confirms)
+   - Attendee list grouped by going/maybe, showing bash name or christian name
+   - Uses Supabase `upsert` with `onConflict: 'ride_id,user_id'` so changing your RSVP updates the existing row
+   - Edit/Delete buttons only visible to the creator, hares, or moderators/admins
+   - Delete has inline confirmation ("Delete Ride" → "Confirm Delete" / "Cancel")
+
+5. **Built the edit ride page** (`/rides/[id]/edit`)
+   - Same form as create, pre-populated with existing ride data
+   - Permission check: only creator, hares, or mods can access
+   - On save, updates the ride and sets `updated_at`/`updated_by`
+   - Replaces hares (deletes existing, inserts new)
+
+6. **Installed `marked`** for Markdown rendering of ride descriptions
+
+### Key concepts introduced
+
+- **Supabase relational queries** — Instead of making separate API calls for rides, hares, and RSVPs, Supabase lets you fetch related data in a single query using the `select` syntax: `rides(*, ride_hares(*), rsvps(*))`. This is like a SQL JOIN but expressed more readably. When a table has multiple foreign keys to the same table (rides → profiles via both `created_by` and `updated_by`), you need to add a "hint" to disambiguate: `profiles!created_by(...)`.
+- **Upsert** — "Insert or update." When a user RSVPs, we use `upsert` with `onConflict: 'ride_id,user_id'`. If no RSVP exists, it inserts one. If one already exists (matching the unique constraint), it updates the status instead. This prevents duplicate RSVPs without needing to check first.
+- **Optimistic UI** — The RSVP buttons update visually the instant you click them, before waiting for the server response. A local `statusOverride` state is set immediately, then cleared when the server responds. If the server fails, the UI reverts to the actual state. This makes the app feel fast.
+- **`$derived`** — Svelte 5's reactive computed values. `const goingRsvps = $derived(data.ride.rsvps.filter(...))` automatically recalculates whenever `data.ride.rsvps` changes. Similar to computed properties in Vue or useMemo in React.
+- **Dynamic routes** — `src/routes/rides/[id]/` uses a bracket parameter in the folder name. SvelteKit extracts the value and passes it as `params.id` in load functions and form actions.
+
+### Files created/modified
+- `src/routes/layout.css` — updated (dark theme base styles)
+- `src/routes/+layout.svelte` — updated (dark nav bar)
+- `src/routes/+page.server.ts` — updated (fetches upcoming + past rides with hares and RSVPs)
+- `src/routes/+page.svelte` — updated (ride cards with hare names and RSVP counts)
+- `src/routes/login/+page.svelte` — updated (dark theme)
+- `src/routes/profile/setup/+page.svelte` — updated (dark theme)
+- `src/routes/pending/+page.svelte` — updated (dark theme)
+- `src/routes/rides/new/+page.server.ts` — created (create ride form action + profile list for hare picker)
+- `src/routes/rides/new/+page.svelte` — created (create ride form UI)
+- `src/routes/rides/[id]/+page.server.ts` — created (ride detail load + RSVP/delete actions)
+- `src/routes/rides/[id]/+page.svelte` — created (ride detail view + RSVP buttons + edit/delete)
+- `src/routes/rides/[id]/edit/+page.server.ts` — created (edit ride form action)
+- `src/routes/rides/[id]/edit/+page.svelte` — created (edit ride form UI)
+- `CLAUDE.md` — updated (dark theme convention)
+
+### Not yet done
+- Banner image upload on rides (depends on Phase 5 storage patterns)
+- Google Places Autocomplete for meeting spot (needs API key)
+- Real-time RSVP updates (optional enhancement)
+- Phase 5: Avatar uploads
+- Phase 6: Comments, mentions, reactions, notifications
+- Phase 7: Email notifications
+- Phase 8: Polish & launch
