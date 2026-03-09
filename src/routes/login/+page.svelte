@@ -72,16 +72,16 @@
 
 			<form onsubmit={handleVerifyOtp} class="mt-6 space-y-4">
 				<p class="text-center text-sm text-gray-400">
-					Or enter the 6-digit code from the email:
+					Or enter the code from the email:
 				</p>
 				<input
 					type="text"
 					bind:value={otp}
-					maxlength={6}
+					maxlength={8}
 					inputmode="numeric"
 					pattern="[0-9]*"
 					autocomplete="one-time-code"
-					placeholder="000000"
+					placeholder="00000000"
 					class="block w-full rounded-md border-gray-700 bg-gray-800 text-center text-2xl tracking-widest text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
 				/>
 
@@ -92,6 +92,7 @@
 				<button
 					type="submit"
 					disabled={verifying || otp.length < 6}
+
 					class="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
 				>
 					{verifying ? 'Verifying...' : 'Verify Code'}

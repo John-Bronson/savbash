@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Sign in to SavBash</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #030712; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+	<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #030712; padding: 40px 0;">
+		<tr>
+			<td align="center">
+				<table width="400" cellpadding="0" cellspacing="0" style="background-color: #111827; border-radius: 12px; padding: 40px; border: 1px solid #374151;">
+					<tr>
+						<td align="center" style="padding-bottom: 24px;">
+							<h1 style="color: #f3f4f6; font-size: 24px; margin: 0;">Sign in to SavBash</h1>
+						</td>
+					</tr>
+					<tr>
+						<td align="center" style="padding-bottom: 32px;">
+							<p style="color: #9ca3af; font-size: 14px; margin: 0;">
+								Enter this code to sign in:
+							</p>
+						</td>
+					</tr>
+					<tr>
+						<td align="center" style="padding-bottom: 32px;">
+							<div style="background-color: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 16px 24px; display: inline-block;">
+								<span style="color: #f3f4f6; font-size: 32px; font-weight: bold; letter-spacing: 8px; font-family: monospace;">{{ .Token }}</span>
+							</div>
+						</td>
+					</tr>
+					<tr>
+						<td align="center" style="padding-bottom: 32px;">
+							<p style="color: #6b7280; font-size: 13px; margin: 0;">or click the button below</p>
+						</td>
+					</tr>
+					<tr>
+						<td align="center" style="padding-bottom: 32px;">
+							<a href="{{ .ConfirmationURL }}" style="background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 32px; border-radius: 6px; font-size: 14px; font-weight: 600; display: inline-block;">
+								Sign in with Magic Link
+							</a>
+						</td>
+					</tr>
+					<tr>
+						<td align="center">
+							<p style="color: #6b7280; font-size: 12px; margin: 0;">
+								If you didn't request this email, you can safely ignore it.
+							</p>
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>
