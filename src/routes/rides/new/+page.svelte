@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
+	import { goto } from '$app/navigation'
 
 	let { data, form } = $props()
 
@@ -14,9 +15,13 @@
 
 	<form method="POST" use:enhance={() => {
 		submitting = true
-		return async ({ update }) => {
-			submitting = false
-			update()
+		return async ({ result, update }) => {
+			if (result.type === 'redirect') {
+				goto(result.location, { replaceState: true })
+			} else {
+				submitting = false
+				update()
+			}
 		}
 	}} class="space-y-5">
 		<div>

@@ -317,3 +317,75 @@ A record of everything done during development, so you can review and learn from
 - Phase 6: Comments, mentions, reactions, notifications
 - Phase 7: Email notifications
 - Phase 8: Polish & launch
+
+---
+
+## Session 1 (continued) — Phase 6: Comments, @Mentions, Reactions & Notifications
+
+### What we did
+
+1. **Created utility helpers** (`src/lib/utils.ts`)
+   - `timeAgo(dateStr)` — converts timestamps to human-readable relative time ("2h ago", "3 days ago", etc.)
+   - `highlightMentions(body, currentUserNames)` — wraps `@mentions` in styled `<span>` tags, highlighting mentions of the current user in blue
+
+2. **Built the full comments section** (`/rides/[id]`)
+   - Comments displayed below ride details with author avatar, name, timestamp, and "(edited)" indicator
+   - Comment form with textarea ("Use @ to mention someone") and Post button
+   - Soft delete: deleted comments show "This comment was deleted" with no author or content
+   - Delete button with inline confirmation, visible to comment author + moderators/admins
+   - Comment count in the header excludes deleted comments
+
+3. **Built emoji reactions**
+   - Seven reaction emojis: 👍❤️😂🔥🚴💪👏
+   - Grouped reaction display: each unique emoji shows with a count and a highlight ring if the current user reacted with it
+   - Clicking an existing reaction toggles it off; clicking a different emoji replaces your reaction
+   - Reaction picker popup (😀+ button) appears above the button, auto-closes after picking
+   - One reaction per user per comment (enforced by unique constraint in DB)
+
+4. **Built @mention system**
+   - Server-side mention parsing after comment insert using regex: `/@([\w][\w\s]*?)(?=\s@|$|\s(?![\w])|\.|,|!|\?)/g`
+   - Looks up mentioned users by `bash_name` or `christian_name` (case-insensitive)
+   - `@everyone` expands to all users with going/maybe RSVPs (excluding the commenter)
+   - Deduplicates mentions by `mentioned_user_id` before inserting into `mentions` table
+   - Mentions are automatically marked as read when visiting the ride page
+
+5. **Built the notifications page** (`/notifications`)
+   - Lists all mentions for the current user, newest first (limit 50)
+   - Each notification shows: commenter avatar, commenter name, "mentioned you in [ride title]", comment preview (80 chars), timestamp
+   - Unread indicator: blue dot on unread notifications, different border/bg styling
+   - "Mark all as read" button (only shown when there are unread mentions)
+   - Clicking a notification links to the specific comment via `#comment-{id}` anchor
+
+6. **Added comment anchor highlighting**
+   - When navigating to a comment via `#comment-{id}`, the comment card highlights with a blue border/bg that fades after 3 seconds
+   - Added `scroll-behavior: smooth` to CSS for smooth scrolling to the anchor
+
+7. **Added notification bell to the nav bar**
+   - 🔔 icon with unread count badge (red circle with white number)
+   - Badge only appears when there are unread mentions
+   - Unread count fetched in root layout load function
+
+### Key concepts introduced
+
+- **Soft delete UX** — The database preserves the full comment record, but the UI shows a simple "This comment was deleted" message. This lets admins review deleted content while keeping the user experience clean.
+- **Mention parsing** — Mentions are parsed server-side after the comment is inserted, not in the UI. This ensures mentions work consistently even if someone submits a form without JavaScript. The regex handles edge cases like multiple mentions, punctuation after names, and multi-word names.
+- **`@everyone` expansion** — Rather than storing a single "@everyone" mention, the system expands it into individual rows for each RSVPed user. This makes the notifications query simple — just `WHERE mentioned_user_id = current_user`.
+- **Anchor-based navigation** — Using URL hash fragments (`#comment-123`) combined with `scroll-behavior: smooth` and `onMount` to highlight the target comment. This is how the notifications page links directly to specific comments.
+- **Grouped reactions** — Reactions are stored individually in the DB (one row per user per comment) but displayed grouped by emoji with counts. The `groupReactions()` function transforms the flat array into a map of `{ emoji → { count, userReacted } }`.
+
+### Files created/modified
+- `src/lib/utils.ts` — created (timeAgo, highlightMentions helpers)
+- `src/routes/+layout.server.ts` — updated (fetches unread mention count)
+- `src/routes/+layout.svelte` — updated (bell icon with unread badge)
+- `src/routes/rides/[id]/+page.server.ts` — updated (added comment, deleteComment, react actions; mention parsing; marks mentions as read)
+- `src/routes/rides/[id]/+page.svelte` — updated (comments section, reactions, mention highlighting, anchor highlighting)
+- `src/routes/notifications/+page.server.ts` — created (mentions list + markAllRead action)
+- `src/routes/notifications/+page.svelte` — created (notifications inbox UI)
+- `src/routes/layout.css` — updated (smooth scrolling)
+
+### Not yet done
+- @mention autocomplete dropdown in comment textarea (currently mentions are typed manually)
+- Banner image upload on rides
+- Google Places Autocomplete for meeting spots
+- Phase 7: Email notifications via Resend
+- Phase 8: Polish & launch

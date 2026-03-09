@@ -2,14 +2,26 @@
 	import { enhance } from '$app/forms'
 	import { goto } from '$app/navigation'
 	import { marked } from 'marked'
+	import { onMount } from 'svelte'
 	import Avatar from '$lib/components/Avatar.svelte'
+	import { timeAgo, highlightMentions } from '$lib/utils'
 
 	let { data, form } = $props()
 
 	let statusOverride = $state<string | null>(null)
 	let confirmingDelete = $state(false)
+	let commentBody = $state('')
+	let submittingComment = $state(false)
+	let showReactionPicker = $state<string | null>(null)
+	let confirmingDeleteComment = $state<string | null>(null)
+
+	const reactionEmojis = ['👍', '❤️', '😂', '🔥', '🚴', '💪', '👏']
 
 	const currentStatus = $derived(statusOverride ?? data.currentRsvpStatus)
+
+	const currentUserNames = $derived(
+		[data.profile?.christian_name, data.profile?.bash_name].filter(Boolean) as string[]
+	)
 
 	function hareDisplayName(hare: { name: string | null; hare_profile: { christian_name: string; bash_name: string | null } | null }) {
 		if (hare.hare_profile) return hare.hare_profile.bash_name || hare.hare_profile.christian_name
@@ -19,10 +31,7 @@
 	function formatDate(dateStr: string) {
 		const d = new Date(dateStr)
 		return d.toLocaleDateString('en-US', {
-			weekday: 'long',
-			year: 'numeric',
-			month: 'long',
-			day: 'numeric'
+			weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
 		})
 	}
 
@@ -50,12 +59,39 @@
 		data.ride.creator?.bash_name || data.ride.creator?.christian_name || 'Unknown'
 	)
 
+	function groupReactions(reactions: { id: string; user_id: string; emoji: string }[]) {
+		const groups: Record<string, { count: number; userReacted: boolean }> = {}
+		for (const r of reactions) {
+			if (!groups[r.emoji]) groups[r.emoji] = { count: 0, userReacted: false }
+			groups[r.emoji].count++
+			if (r.user_id === data.user?.id) groups[r.emoji].userReacted = true
+		}
+		return Object.entries(groups)
+	}
+
 	const rsvpButtons = [
 		{ status: 'going', label: "I'm In", activeClass: 'bg-green-600 text-white', inactiveClass: 'bg-gray-800 text-gray-400 hover:bg-gray-700' },
 		{ status: 'maybe', label: 'Maybe', activeClass: 'bg-yellow-600 text-white', inactiveClass: 'bg-gray-800 text-gray-400 hover:bg-gray-700' },
 		{ status: 'not_going', label: "Can't Make It", activeClass: 'bg-red-600 text-white', inactiveClass: 'bg-gray-800 text-gray-400 hover:bg-gray-700' }
 	]
+
+	// Highlight targeted comment from URL hash
+	let highlightedCommentId = $state<string | null>(null)
+
+	onMount(() => {
+		if (window.location.hash) {
+			const id = window.location.hash.replace('#comment-', '')
+			highlightedCommentId = id
+			setTimeout(() => { highlightedCommentId = null }, 3000)
+		}
+	})
 </script>
+
+<svelte:head>
+	<style>
+		html { scroll-behavior: smooth; }
+	</style>
+</svelte:head>
 
 <div class="mx-auto max-w-2xl">
 	<!-- Header -->
@@ -130,9 +166,7 @@
 	<!-- Attendees -->
 	{#if goingRsvps.length > 0}
 		<div class="mb-6">
-			<h3 class="mb-2 text-sm font-medium text-gray-400">
-				Going ({goingRsvps.length})
-			</h3>
+			<h3 class="mb-2 text-sm font-medium text-gray-400">Going ({goingRsvps.length})</h3>
 			<div class="flex flex-wrap gap-2">
 				{#each goingRsvps as rsvp}
 					<div class="flex items-center gap-2 rounded-full bg-gray-800 py-1 pl-1 pr-3">
@@ -148,9 +182,7 @@
 
 	{#if maybeRsvps.length > 0}
 		<div class="mb-6">
-			<h3 class="mb-2 text-sm font-medium text-gray-400">
-				Maybe ({maybeRsvps.length})
-			</h3>
+			<h3 class="mb-2 text-sm font-medium text-gray-400">Maybe ({maybeRsvps.length})</h3>
 			<div class="flex flex-wrap gap-2">
 				{#each maybeRsvps as rsvp}
 					<div class="flex items-center gap-2 rounded-full bg-gray-800 py-1 pl-1 pr-3">
@@ -164,7 +196,161 @@
 		</div>
 	{/if}
 
-	<!-- Edit/Delete -->
+	<!-- Comments -->
+	<div class="mt-8 border-t border-gray-800 pt-6">
+		<h2 class="mb-4 text-lg font-semibold text-gray-200">
+			Comments ({data.comments.filter((c: { is_deleted: boolean }) => !c.is_deleted).length})
+		</h2>
+
+		{#if data.comments.length === 0}
+			<p class="text-sm text-gray-500">No comments yet. Be the first!</p>
+		{/if}
+
+		<div class="space-y-4">
+			{#each data.comments as comment}
+				<div
+					id="comment-{comment.id}"
+					class="rounded-lg border border-gray-800 p-3 transition-colors duration-1000 {highlightedCommentId === comment.id ? 'border-blue-500 bg-blue-900/20' : 'bg-gray-900'}"
+				>
+					{#if comment.is_deleted}
+						<p class="text-sm italic text-gray-600">This comment was deleted.</p>
+					{:else}
+						<div class="flex items-start gap-3">
+							<Avatar profile={comment.author} size="sm" />
+							<div class="min-w-0 flex-1">
+								<div class="flex items-center gap-2">
+									<span class="text-sm font-medium text-gray-200">
+										{comment.author?.bash_name || comment.author?.christian_name}
+									</span>
+									<span class="text-xs text-gray-600">{timeAgo(comment.created_at)}</span>
+									{#if comment.updated_at}
+										<span class="text-xs text-gray-600">(edited)</span>
+									{/if}
+								</div>
+								<p class="mt-1 text-sm text-gray-300">
+									{@html highlightMentions(comment.body, currentUserNames)}
+								</p>
+
+								<!-- Reactions display -->
+								<div class="mt-2 flex flex-wrap items-center gap-1">
+									{#each groupReactions(comment.reactions) as [emoji, { count, userReacted }]}
+										<form method="POST" action="?/react" use:enhance>
+											<input type="hidden" name="comment_id" value={comment.id} />
+											<input type="hidden" name="emoji" value={emoji} />
+											<button
+												type="submit"
+												class="rounded-full px-2 py-0.5 text-sm transition {userReacted ? 'bg-blue-600/30 ring-1 ring-blue-500' : 'bg-gray-800 hover:bg-gray-700'}"
+											>
+												{emoji} {count}
+											</button>
+										</form>
+									{/each}
+
+									<!-- Add reaction button -->
+									{#if data.session}
+										<div class="relative">
+											<button
+												type="button"
+												onclick={() => showReactionPicker = showReactionPicker === comment.id ? null : comment.id}
+												class="rounded-full bg-gray-800 px-2 py-0.5 text-sm text-gray-500 hover:bg-gray-700 hover:text-gray-400"
+											>
+												😀+
+											</button>
+											{#if showReactionPicker === comment.id}
+												<div class="absolute bottom-full left-0 z-10 mb-1 flex gap-1 rounded-lg border border-gray-700 bg-gray-800 p-2 shadow-lg">
+													{#each reactionEmojis as emoji}
+														<form method="POST" action="?/react" use:enhance={() => {
+															showReactionPicker = null
+															return async ({ update }) => { update() }
+														}}>
+															<input type="hidden" name="comment_id" value={comment.id} />
+															<input type="hidden" name="emoji" value={emoji} />
+															<button
+																type="submit"
+																class="rounded p-1 text-lg hover:bg-gray-700"
+															>
+																{emoji}
+															</button>
+														</form>
+													{/each}
+												</div>
+											{/if}
+										</div>
+									{/if}
+
+									<!-- Delete button -->
+									{#if data.user?.id === comment.user_id || (data.profile && ['moderator', 'admin'].includes(data.profile.role))}
+										{#if confirmingDeleteComment === comment.id}
+											<form method="POST" action="?/deleteComment" use:enhance>
+												<input type="hidden" name="comment_id" value={comment.id} />
+												<button type="submit" class="ml-2 text-xs text-red-400 hover:text-red-300">
+													Confirm delete
+												</button>
+											</form>
+											<button
+												onclick={() => confirmingDeleteComment = null}
+												class="text-xs text-gray-500 hover:text-gray-400"
+											>
+												Cancel
+											</button>
+										{:else}
+											<button
+												onclick={() => confirmingDeleteComment = comment.id}
+												class="ml-2 text-xs text-gray-600 hover:text-gray-500"
+											>
+												Delete
+											</button>
+										{/if}
+									{/if}
+								</div>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/each}
+		</div>
+
+		<!-- Post comment -->
+		{#if data.session}
+			<form
+				method="POST"
+				action="?/comment"
+				use:enhance={() => {
+					submittingComment = true
+					return async ({ update }) => {
+						commentBody = ''
+						submittingComment = false
+						update()
+					}
+				}}
+				class="mt-4"
+			>
+				<div class="flex gap-3">
+					<Avatar profile={data.profile} size="sm" />
+					<div class="flex-1">
+						<textarea
+							name="body"
+							bind:value={commentBody}
+							rows="2"
+							placeholder="Add a comment... Use @ to mention someone"
+							class="block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+						></textarea>
+					</div>
+				</div>
+				<div class="mt-2 flex justify-end">
+					<button
+						type="submit"
+						disabled={submittingComment || !commentBody.trim()}
+						class="rounded-md bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+					>
+						{submittingComment ? 'Posting...' : 'Post'}
+					</button>
+				</div>
+			</form>
+		{/if}
+	</div>
+
+	<!-- Edit/Delete Ride -->
 	{#if data.canEdit}
 		<div class="mt-8 border-t border-gray-800 pt-6">
 			<div class="flex gap-3">

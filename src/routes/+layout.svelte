@@ -26,9 +26,17 @@
 
 		<div class="flex items-center gap-4">
 			{#if data.session}
+				<a href="/notifications" class="relative text-gray-400 hover:text-gray-200">
+					<span class="text-lg">🔔</span>
+					{#if data.unreadMentionCount > 0}
+						<span class="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+							{data.unreadMentionCount}
+						</span>
+					{/if}
+				</a>
 				<a href="/profile" class="flex items-center gap-2 hover:opacity-80">
 					<Avatar profile={data.profile} size="sm" />
-					<span class="text-sm text-gray-400">{displayName}</span>
+					<span class="hidden text-sm text-gray-400 sm:inline">{displayName}</span>
 				</a>
 				<button
 					onclick={signOut}

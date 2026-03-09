@@ -16,7 +16,28 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	if (!ride) error(404, 'Ride not found')
 
-	// Check if current user is the creator or a hare
+	// Fetch comments with profiles and reactions
+	const { data: comments } = await locals.supabase
+		.from('comments')
+		.select(`
+			*,
+			author:profiles!user_id(christian_name, bash_name, avatar_url, avatar_emoji),
+			reactions(id, user_id, emoji)
+		`)
+		.eq('ride_id', params.id)
+		.order('created_at', { ascending: true })
+
+	// Mark mentions as read when visiting the ride page
+	if (locals.user) {
+		await locals.supabase
+			.from('mentions')
+			.update({ is_read: true })
+			.eq('mentioned_user_id', locals.user.id)
+			.eq('ride_id', params.id)
+			.eq('is_read', false)
+	}
+
+	// Check permissions
 	const isCreator = locals.user?.id === ride.created_by
 	const isHare = ride.ride_hares.some(
 		(h: { user_id: string | null }) => h.user_id === locals.user?.id
@@ -24,12 +45,16 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const isMod = locals.profile && ['moderator', 'admin'].includes(locals.profile.role)
 	const canEdit = isCreator || isHare || isMod
 
-	// Get current user's RSVP
 	const currentRsvp = ride.rsvps.find(
 		(r: { user_id: string }) => r.user_id === locals.user?.id
 	)
 
-	return { ride, canEdit, currentRsvpStatus: currentRsvp?.status ?? null }
+	return {
+		ride,
+		comments: comments ?? [],
+		canEdit,
+		currentRsvpStatus: currentRsvp?.status ?? null
+	}
 }
 
 export const actions: Actions = {
@@ -46,16 +71,143 @@ export const actions: Actions = {
 		const { error: rsvpError } = await locals.supabase
 			.from('rsvps')
 			.upsert(
-				{
-					ride_id: params.id,
-					user_id: locals.user.id,
-					status
-				},
+				{ ride_id: params.id, user_id: locals.user.id, status },
 				{ onConflict: 'ride_id,user_id' }
 			)
 
-		if (rsvpError) {
-			return fail(500, { message: 'Failed to update RSVP' })
+		if (rsvpError) return fail(500, { message: 'Failed to update RSVP' })
+		return { success: true }
+	},
+
+	comment: async ({ request, params, locals }) => {
+		if (!locals.user) return fail(401, { message: 'Not logged in' })
+
+		const formData = await request.formData()
+		const body = (formData.get('body') as string)?.trim()
+
+		if (!body) return fail(400, { message: 'Comment cannot be empty' })
+
+		// Insert comment
+		const { data: comment, error: commentError } = await locals.supabase
+			.from('comments')
+			.insert({ ride_id: params.id, user_id: locals.user.id, body })
+			.select('id')
+			.single()
+
+		if (commentError || !comment) return fail(500, { message: 'Failed to post comment' })
+
+		// Parse mentions from comment body
+		const mentionRegex = /@([\w][\w\s]*?)(?=\s@|$|\s(?![\w])|\.|,|!|\?)/g
+		const mentionNames: string[] = []
+		let match
+		while ((match = mentionRegex.exec(body)) !== null) {
+			mentionNames.push(match[1].trim())
+		}
+
+		if (mentionNames.length > 0) {
+			const mentionRows: { comment_id: string; mentioned_user_id: string; ride_id: string }[] = []
+
+			for (const name of mentionNames) {
+				if (name.toLowerCase() === 'everyone') {
+					// Expand @everyone to all RSVPed users
+					const { data: rsvpUsers } = await locals.supabase
+						.from('rsvps')
+						.select('user_id')
+						.eq('ride_id', params.id)
+						.in('status', ['going', 'maybe'])
+
+					if (rsvpUsers) {
+						for (const rsvp of rsvpUsers) {
+							if (rsvp.user_id !== locals.user.id) {
+								mentionRows.push({
+									comment_id: comment.id,
+									mentioned_user_id: rsvp.user_id,
+									ride_id: params.id
+								})
+							}
+						}
+					}
+				} else {
+					// Look up by bash_name first, then christian_name
+					const { data: profile } = await locals.supabase
+						.from('profiles')
+						.select('id')
+						.or(`bash_name.ilike.${name},christian_name.ilike.${name}`)
+						.single()
+
+					if (profile && profile.id !== locals.user.id) {
+						mentionRows.push({
+							comment_id: comment.id,
+							mentioned_user_id: profile.id,
+							ride_id: params.id
+						})
+					}
+				}
+			}
+
+			// Deduplicate by mentioned_user_id
+			const unique = mentionRows.filter(
+				(row, i, arr) => arr.findIndex((r) => r.mentioned_user_id === row.mentioned_user_id) === i
+			)
+
+			if (unique.length > 0) {
+				await locals.supabase.from('mentions').insert(unique)
+			}
+		}
+
+		return { commented: true }
+	},
+
+	deleteComment: async ({ request, locals }) => {
+		if (!locals.user) return fail(401, { message: 'Not logged in' })
+
+		const formData = await request.formData()
+		const commentId = formData.get('comment_id') as string
+
+		const { error: deleteError } = await locals.supabase
+			.from('comments')
+			.update({
+				is_deleted: true,
+				deleted_at: new Date().toISOString(),
+				deleted_by: locals.user.id
+			})
+			.eq('id', commentId)
+
+		if (deleteError) return fail(500, { message: 'Failed to delete comment' })
+		return { success: true }
+	},
+
+	react: async ({ request, locals }) => {
+		if (!locals.user) return fail(401, { message: 'Not logged in' })
+
+		const formData = await request.formData()
+		const commentId = formData.get('comment_id') as string
+		const emoji = formData.get('emoji') as string
+
+		// Check if user already has this exact reaction
+		const { data: existing } = await locals.supabase
+			.from('reactions')
+			.select('id, emoji')
+			.eq('comment_id', commentId)
+			.eq('user_id', locals.user.id)
+			.single()
+
+		if (existing) {
+			if (existing.emoji === emoji) {
+				// Same emoji — toggle off (delete)
+				await locals.supabase.from('reactions').delete().eq('id', existing.id)
+			} else {
+				// Different emoji — replace
+				await locals.supabase
+					.from('reactions')
+					.update({ emoji })
+					.eq('id', existing.id)
+			}
+		} else {
+			// No existing reaction — insert
+			await locals.supabase
+				.from('reactions')
+				.insert({ comment_id: commentId, user_id: locals.user.id, emoji })
 		}
 
 		return { success: true }
@@ -69,10 +221,7 @@ export const actions: Actions = {
 			.delete()
 			.eq('id', params.id)
 
-		if (deleteError) {
-			return fail(500, { message: 'Failed to delete ride' })
-		}
-
+		if (deleteError) return fail(500, { message: 'Failed to delete ride' })
 		return { deleted: true }
 	}
 }
