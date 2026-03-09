@@ -352,39 +352,43 @@
 
 	<!-- Edit/Delete Ride -->
 	{#if data.canEdit}
+		{@const label = data.isMod ? (data.isCreator || data.isHare ? 'Hare / Admin' : 'Admin') : data.isHare ? 'Hare' : 'Your Ride'}
 		<div class="mt-8 border-t border-gray-800 pt-6">
-			<div class="flex gap-3">
-				<a
-					href="/rides/{data.ride.id}/edit"
-					class="rounded-md bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-				>
-					Edit Ride
-				</a>
-				{#if !confirmingDelete}
-					<button
-						onclick={() => confirmingDelete = true}
-						class="rounded-md bg-gray-800 px-4 py-2 text-sm text-red-400 hover:bg-gray-700"
+			<div class="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+				<p class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</p>
+				<div class="flex gap-3">
+					<a
+						href="/rides/{data.ride.id}/edit"
+						class="rounded-md bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
 					>
-						Delete Ride
-					</button>
-				{:else}
-					<form method="POST" action="?/deleteRide" use:enhance={() => {
-						return async () => { goto('/') }
-					}}>
+						Edit Ride
+					</a>
+					{#if !confirmingDelete}
 						<button
-							type="submit"
-							class="rounded-md bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+							onclick={() => confirmingDelete = true}
+							class="rounded-md bg-gray-800 px-4 py-2 text-sm text-red-400 hover:bg-gray-700"
 						>
-							Confirm Delete
+							Delete Ride
 						</button>
-					</form>
-					<button
-						onclick={() => confirmingDelete = false}
-						class="rounded-md bg-gray-800 px-4 py-2 text-sm text-gray-400 hover:bg-gray-700"
-					>
-						Cancel
-					</button>
-				{/if}
+					{:else}
+						<form method="POST" action="?/deleteRide" use:enhance={() => {
+							return async () => { goto('/') }
+						}}>
+							<button
+								type="submit"
+								class="rounded-md bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+							>
+								Confirm Delete
+							</button>
+						</form>
+						<button
+							onclick={() => confirmingDelete = false}
+							class="rounded-md bg-gray-800 px-4 py-2 text-sm text-gray-400 hover:bg-gray-700"
+						>
+							Cancel
+						</button>
+					{/if}
+				</div>
 			</div>
 		</div>
 	{/if}

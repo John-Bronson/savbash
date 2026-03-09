@@ -54,6 +54,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		ride,
 		comments: comments ?? [],
 		canEdit,
+		isCreator,
+		isHare,
+		isMod: !!isMod,
 		currentRsvpStatus: currentRsvp?.status ?? null
 	}
 }
