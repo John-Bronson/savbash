@@ -254,7 +254,66 @@ A record of everything done during development, so you can review and learn from
 - Banner image upload on rides (depends on Phase 5 storage patterns)
 - Google Places Autocomplete for meeting spot (needs API key)
 - Real-time RSVP updates (optional enhancement)
-- Phase 5: Avatar uploads
+
+---
+
+## Session 1 (continued) — Phase 5: Avatars
+
+### What we did
+
+1. **Built the `Avatar.svelte` component** (`src/lib/components/Avatar.svelte`)
+   - Reusable across the entire site. Accepts a `profile` prop and a `size` (sm/md/lg).
+   - Three rendering modes:
+     - **Photo**: cropped circle `<img>` from `avatar_url`
+     - **Emoji**: oversized emoji on a dark circle (`overflow: visible`), emoji renders 1.5-2x the container size
+     - **Initials fallback**: first letters of the display name on a deterministic colored circle (color is derived from the name so it's always the same for the same person)
+   - Dark theme colors for the initials backgrounds (17 muted color options)
+
+2. **Built the `AvatarChooser.svelte` component** (`src/lib/components/AvatarChooser.svelte`)
+   - Reusable avatar picker used in both profile setup and profile edit
+   - Tab switcher: "Upload photo" / "Pick an emoji"
+   - **Photo upload**: file picker → client-side resize to 64x64 WebP via `OffscreenCanvas` → upload to Supabase Storage `avatars` bucket → saves public URL
+   - **Emoji picker**: ~60 curated emojis in 5 groups (Faces, Sports, Animals, Food, Objects & Symbols)
+   - Live preview at the top showing how the avatar will look
+   - Uses `$bindable` props so the parent form can read the selected avatar values
+   - Hidden `<input>` fields so the values are submitted with the form
+
+3. **Updated profile setup** (`/profile/setup`)
+   - Added the AvatarChooser above the name fields
+   - Server action now saves `avatar_url` and `avatar_emoji` along with the name
+
+4. **Built the profile edit page** (`/profile`)
+   - Full profile editor: avatar chooser, christian name, bash name, email notification preferences (ride announcements + mention notifications)
+   - "Profile saved!" confirmation banner on success
+   - Linked from the nav bar (clicking your avatar/name)
+
+5. **Added avatars to the nav bar**
+   - Small avatar next to the user's name, links to `/profile`
+
+6. **Added avatars to the RSVP attendee list**
+   - Each attendee in the going/maybe lists shows their avatar (small) next to their name in a pill-shaped badge
+   - Updated the Supabase query to fetch `avatar_url` and `avatar_emoji` for RSVP profiles
+
+### Key concepts introduced
+
+- **Client-side image processing** — The Canvas API (specifically `OffscreenCanvas`) lets you resize images in the browser before uploading. This means you never send a 5MB phone photo to the server — it gets shrunk to a tiny 64x64 WebP blob (~5KB) right on the device.
+- **`$bindable` props** — Svelte 5's way of creating two-way bindings between parent and child components. The AvatarChooser uses `$bindable` for `avatarUrl` and `avatarEmoji` so the parent form can read the values selected in the chooser.
+- **Supabase Storage** — File storage separate from the database. Files are uploaded to "buckets" (like `avatars`), and each file gets a public URL. The `upsert: true` option means re-uploading to the same path replaces the old file.
+- **Deterministic colors** — The initials fallback picks a color by hashing the user's name (summing character codes, modulo the number of colors). This means the same name always gets the same color, even across different pages and sessions.
+
+### Files created/modified
+- `src/lib/components/Avatar.svelte` — created (reusable avatar component)
+- `src/lib/components/AvatarChooser.svelte` — created (avatar picker with photo upload + emoji grid)
+- `src/routes/profile/+page.server.ts` — created (profile edit form action)
+- `src/routes/profile/+page.svelte` — created (profile edit UI with avatar, names, email prefs)
+- `src/routes/profile/setup/+page.server.ts` — updated (saves avatar fields)
+- `src/routes/profile/setup/+page.svelte` — updated (added AvatarChooser)
+- `src/routes/+layout.svelte` — updated (avatar in nav bar, profile link)
+- `src/routes/rides/[id]/+page.server.ts` — updated (fetch avatar data in RSVP profiles)
+- `src/routes/rides/[id]/+page.svelte` — updated (avatars in attendee list)
+
+### Not yet done
+- Banner image upload on rides (storage is set up, just needs UI)
 - Phase 6: Comments, mentions, reactions, notifications
 - Phase 7: Email notifications
 - Phase 8: Polish & launch

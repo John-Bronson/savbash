@@ -2,6 +2,7 @@
 	import './layout.css'
 	import favicon from '$lib/assets/favicon.svg'
 	import { supabase } from '$lib/supabaseClient'
+	import Avatar from '$lib/components/Avatar.svelte'
 
 	let { data, children } = $props()
 
@@ -25,7 +26,10 @@
 
 		<div class="flex items-center gap-4">
 			{#if data.session}
-				<span class="text-sm text-gray-400">{displayName}</span>
+				<a href="/profile" class="flex items-center gap-2 hover:opacity-80">
+					<Avatar profile={data.profile} size="sm" />
+					<span class="text-sm text-gray-400">{displayName}</span>
+				</a>
 				<button
 					onclick={signOut}
 					class="text-sm text-gray-400 hover:text-gray-200"

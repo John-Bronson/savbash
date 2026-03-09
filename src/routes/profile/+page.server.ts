@@ -8,16 +8,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	default: async ({ request, locals }) => {
-		if (!locals.user) return fail(401, { message: 'Not logged in', christianName: '', bashName: null })
+		if (!locals.user) return fail(401, { message: 'Not logged in' })
 
 		const formData = await request.formData()
 		const christianName = (formData.get('christian_name') as string)?.trim()
 		const bashName = (formData.get('bash_name') as string)?.trim() || null
 		const avatarUrl = (formData.get('avatar_url') as string)?.trim() || null
 		const avatarEmoji = (formData.get('avatar_emoji') as string)?.trim() || null
+		const subscribedToEmails = formData.get('subscribed_to_emails') === 'on'
+		const notifyOnMention = formData.get('notify_on_mention') === 'on'
 
 		if (!christianName) {
-			return fail(400, { message: 'Christian name is required', christianName: christianName ?? '', bashName })
+			return fail(400, { message: 'Christian name is required' })
 		}
 
 		// Check bash_name uniqueness if provided
@@ -30,11 +32,7 @@ export const actions: Actions = {
 				.single()
 
 			if (existing) {
-				return fail(400, {
-					message: 'That bash name is already taken',
-					christianName,
-					bashName
-				})
+				return fail(400, { message: 'That bash name is already taken' })
 			}
 		}
 
@@ -44,18 +42,16 @@ export const actions: Actions = {
 				christian_name: christianName,
 				bash_name: bashName,
 				avatar_url: avatarUrl,
-				avatar_emoji: avatarEmoji
+				avatar_emoji: avatarEmoji,
+				subscribed_to_emails: subscribedToEmails,
+				notify_on_mention: notifyOnMention
 			})
 			.eq('id', locals.user.id)
 
 		if (error) {
-			return fail(500, {
-				message: 'Something went wrong. Please try again.',
-				christianName: christianName ?? '',
-				bashName
-			})
+			return fail(500, { message: 'Something went wrong. Please try again.' })
 		}
 
-		redirect(303, '/')
+		return { success: true }
 	}
 }

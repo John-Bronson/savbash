@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
+	import AvatarChooser from '$lib/components/AvatarChooser.svelte'
 
 	let { data, form } = $props()
+
+	let avatarUrl = $state(data.profile?.avatar_url ?? null)
+	let avatarEmoji = $state(data.profile?.avatar_emoji ?? null)
 </script>
 
 <div class="flex min-h-[60vh] items-center justify-center">
@@ -13,7 +17,15 @@
 			Set up your profile to get started.
 		</p>
 
-		<form method="POST" use:enhance class="space-y-4">
+		<form method="POST" use:enhance class="space-y-5">
+			<AvatarChooser
+				bind:avatarUrl
+				bind:avatarEmoji
+				christianName={form?.christianName ?? data.profile?.christian_name ?? ''}
+				bashName={form?.bashName ?? data.profile?.bash_name ?? ''}
+				userId={data.userId}
+			/>
+
 			<div>
 				<label for="christian_name" class="block text-sm font-medium text-gray-300">
 					Christian name <span class="text-red-400">*</span>

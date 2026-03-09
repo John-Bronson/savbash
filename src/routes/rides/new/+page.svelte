@@ -6,12 +6,19 @@
 	let hare1Mode = $state<'member' | 'text'>('member')
 	let hare2Mode = $state<'member' | 'text'>('member')
 	let showHare2 = $state(false)
+	let submitting = $state(false)
 </script>
 
 <div class="mx-auto max-w-lg">
 	<h1 class="mb-6 text-2xl font-bold text-gray-100">Post a Ride</h1>
 
-	<form method="POST" use:enhance class="space-y-5">
+	<form method="POST" use:enhance={() => {
+		submitting = true
+		return async ({ update }) => {
+			submitting = false
+			update()
+		}
+	}} class="space-y-5">
 		<div>
 			<label for="title" class="block text-sm font-medium text-gray-300">
 				Title <span class="text-red-400">*</span>
@@ -192,9 +199,10 @@
 
 		<button
 			type="submit"
-			class="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+			disabled={submitting}
+			class="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
 		>
-			Post Ride
+			{submitting ? 'Posting...' : 'Post Ride'}
 		</button>
 	</form>
 </div>

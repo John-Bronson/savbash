@@ -6,10 +6,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.from('rides')
 		.select(`
 			*,
-			creator:profiles!created_by(christian_name, bash_name),
+			creator:profiles!created_by(christian_name, bash_name, avatar_url, avatar_emoji),
 			editor:profiles!updated_by(christian_name, bash_name),
-			ride_hares(*, hare_profile:profiles!user_id(christian_name, bash_name)),
-			rsvps(id, user_id, status, rsvp_profile:profiles!user_id(christian_name, bash_name))
+			ride_hares(*, hare_profile:profiles!user_id(christian_name, bash_name, avatar_url, avatar_emoji)),
+			rsvps(id, user_id, status, rsvp_profile:profiles!user_id(christian_name, bash_name, avatar_url, avatar_emoji))
 		`)
 		.eq('id', params.id)
 		.single()

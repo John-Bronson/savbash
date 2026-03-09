@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms'
 	import { goto } from '$app/navigation'
 	import { marked } from 'marked'
+	import Avatar from '$lib/components/Avatar.svelte'
 
 	let { data, form } = $props()
 
@@ -134,9 +135,12 @@
 			</h3>
 			<div class="flex flex-wrap gap-2">
 				{#each goingRsvps as rsvp}
-					<span class="rounded-full bg-gray-800 px-3 py-1 text-sm text-gray-300">
-						{rsvp.rsvp_profile?.bash_name || rsvp.rsvp_profile?.christian_name}
-					</span>
+					<div class="flex items-center gap-2 rounded-full bg-gray-800 py-1 pl-1 pr-3">
+						<Avatar profile={rsvp.rsvp_profile} size="sm" />
+						<span class="text-sm text-gray-300">
+							{rsvp.rsvp_profile?.bash_name || rsvp.rsvp_profile?.christian_name}
+						</span>
+					</div>
 				{/each}
 			</div>
 		</div>
@@ -149,9 +153,12 @@
 			</h3>
 			<div class="flex flex-wrap gap-2">
 				{#each maybeRsvps as rsvp}
-					<span class="rounded-full bg-gray-800 px-3 py-1 text-sm text-gray-300">
-						{rsvp.rsvp_profile?.bash_name || rsvp.rsvp_profile?.christian_name}
-					</span>
+					<div class="flex items-center gap-2 rounded-full bg-gray-800 py-1 pl-1 pr-3">
+						<Avatar profile={rsvp.rsvp_profile} size="sm" />
+						<span class="text-sm text-gray-300">
+							{rsvp.rsvp_profile?.bash_name || rsvp.rsvp_profile?.christian_name}
+						</span>
+					</div>
 				{/each}
 			</div>
 		</div>
