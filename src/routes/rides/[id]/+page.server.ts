@@ -1,4 +1,5 @@
 import { error, fail } from '@sveltejs/kit'
+import { sendMentionNotification } from '$lib/email'
 import type { Actions, PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -152,6 +153,38 @@ export const actions: Actions = {
 
 			if (unique.length > 0) {
 				await locals.supabase.from('mentions').insert(unique)
+
+				// Send mention notification emails (fire and forget)
+				const commenterName = locals.profile?.bash_name || locals.profile?.christian_name || 'Someone'
+
+				// Get the ride title
+				const { data: ride } = await locals.supabase
+					.from('rides')
+					.select('title')
+					.eq('id', params.id)
+					.single()
+
+				// Get mentioned users' emails and preferences
+				const mentionedIds = unique.map((r) => r.mentioned_user_id)
+				const { data: mentionedProfiles } = await locals.supabase
+					.from('profiles')
+					.select('id, email, notify_on_mention')
+					.in('id', mentionedIds)
+
+				if (mentionedProfiles && ride) {
+					for (const mp of mentionedProfiles) {
+						if (mp.notify_on_mention && mp.email) {
+							sendMentionNotification({
+								mentionedEmail: mp.email,
+								mentionerName: commenterName,
+								commentBody: body,
+								rideTitle: ride.title,
+								rideId: params.id,
+								commentId: comment.id
+							})
+						}
+					}
+				}
 			}
 		}
 

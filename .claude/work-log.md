@@ -389,3 +389,59 @@ A record of everything done during development, so you can review and learn from
 - Google Places Autocomplete for meeting spots
 - Phase 7: Email notifications via Resend
 - Phase 8: Polish & launch
+
+---
+
+## Session 1 (continued) — Phase 7: Email Notifications
+
+### What we did
+
+1. **Installed Resend SDK** (`npm install resend`)
+
+2. **Created `src/lib/email.ts`** — centralized email utility with two functions:
+   - `sendRideAnnouncement(ride, subscribers)` — sends a styled HTML email to all subscribers when a new ride is posted. Includes ride title, date/time, meeting spot, hare names, description preview, and a "View Ride" button. Uses BCC to send one email to all subscribers at once.
+   - `sendMentionNotification(data)` — sends an email to a mentioned user with the commenter's name, a preview of the comment, the ride title, and a "View Comment" button linking to the specific comment anchor.
+   - Both use a shared `emailWrapper()` for consistent dark-themed HTML email styling matching the site's look.
+   - Both include an "Email preferences" link in the footer so recipients can easily opt out.
+   - HTML is escaped via `escapeHtml()` to prevent XSS in email content.
+
+3. **Wired ride announcements into ride creation** (`/rides/new/+page.server.ts`)
+   - After creating a ride and inserting hares, queries all profiles with `subscribed_to_emails = true` and `role != 'pending'`
+   - Resolves hare display names for the email
+   - Calls `sendRideAnnouncement()` as fire-and-forget (doesn't block the redirect)
+
+4. **Wired mention notifications into comment posting** (`/rides/[id]/+page.server.ts`)
+   - After inserting mention rows, fetches each mentioned user's email and `notify_on_mention` preference
+   - Sends individual emails only to users who have `notify_on_mention = true`
+   - Includes the commenter's name, comment body preview, ride title, and deep link to the comment
+
+5. **Added email preferences to profile setup** (`/profile/setup`)
+   - Two checkboxes on the onboarding screen, both pre-checked:
+     - "Email me when a new ride is posted" (`subscribed_to_emails`)
+     - "Email me when someone mentions me" (`notify_on_mention`)
+   - Server action now saves these preferences along with name/avatar
+
+6. **Added `PUBLIC_SITE_URL` environment variable**
+   - Used in email templates for generating links to rides and comments
+   - Set to `http://localhost:5173` locally; needs to be set to production URL on Netlify
+
+### Key concepts introduced
+
+- **Fire-and-forget emails** — Email sending is called without `await`, so the user isn't blocked waiting for the email to send. If the email fails, it logs an error but doesn't break the user experience. The comment/ride is already saved in the database by the time the email goes out.
+- **BCC for bulk emails** — Ride announcements use BCC (blind carbon copy) to send one email to all subscribers at once, rather than making separate API calls per recipient. Recipients can't see each other's email addresses.
+- **HTML email styling** — Email clients don't support CSS classes or external stylesheets, so all styling must be inline (`style="..."` attributes). The email template uses inline styles matching the site's dark theme.
+- **Resend SDK** — A simple wrapper around the Resend API. `resend.emails.send()` takes `from`, `to`, `subject`, and `html` — no complex configuration needed.
+
+### Files created/modified
+- `src/lib/email.ts` — created (email utility with ride announcement + mention notification)
+- `src/routes/rides/new/+page.server.ts` — updated (sends ride announcement after creation)
+- `src/routes/rides/[id]/+page.server.ts` — updated (sends mention notifications after comment)
+- `src/routes/profile/setup/+page.svelte` — updated (email preference checkboxes)
+- `src/routes/profile/setup/+page.server.ts` — updated (saves email preferences)
+- `.env` — updated (added RESEND_API_KEY and PUBLIC_SITE_URL)
+
+### Not yet done
+- @mention autocomplete dropdown in comment textarea
+- Banner image upload on rides
+- Google Places Autocomplete for meeting spots
+- Phase 8: Polish & launch

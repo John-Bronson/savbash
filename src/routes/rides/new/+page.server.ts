@@ -1,4 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit'
+import { sendRideAnnouncement } from '$lib/email'
 import type { Actions, PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -71,8 +72,43 @@ export const actions: Actions = {
 			hares.push({ ride_id: ride.id, user_id: null, name: hare2Name })
 		}
 
+		const hareNames: string[] = []
 		if (hares.length > 0) {
 			await locals.supabase.from('ride_hares').insert(hares)
+			// Resolve hare display names for the email
+			for (const h of hares) {
+				if (h.name) {
+					hareNames.push(h.name)
+				} else if (h.user_id) {
+					const { data: hp } = await locals.supabase
+						.from('profiles')
+						.select('christian_name, bash_name')
+						.eq('id', h.user_id)
+						.single()
+					if (hp) hareNames.push(hp.bash_name || hp.christian_name)
+				}
+			}
+		}
+
+		// Send ride announcement email (fire and forget — don't block the redirect)
+		const { data: subscribers } = await locals.supabase
+			.from('profiles')
+			.select('email')
+			.eq('subscribed_to_emails', true)
+			.neq('role', 'pending')
+
+		if (subscribers && subscribers.length > 0) {
+			sendRideAnnouncement(
+				{
+					id: ride.id,
+					title,
+					ride_date: rideDatetime,
+					meeting_spot_name: meetingSpotName,
+					description,
+					hares: hareNames
+				},
+				subscribers.filter((s: { email: string | null }) => s.email) as { email: string }[]
+			)
 		}
 
 		redirect(303, `/rides/${ride.id}`)

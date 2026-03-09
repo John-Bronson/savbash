@@ -15,6 +15,8 @@ export const actions: Actions = {
 		const bashName = (formData.get('bash_name') as string)?.trim() || null
 		const avatarUrl = (formData.get('avatar_url') as string)?.trim() || null
 		const avatarEmoji = (formData.get('avatar_emoji') as string)?.trim() || null
+		const subscribedToEmails = formData.get('subscribed_to_emails') === 'on'
+		const notifyOnMention = formData.get('notify_on_mention') === 'on'
 
 		if (!christianName) {
 			return fail(400, { message: 'Christian name is required', christianName: christianName ?? '', bashName })
@@ -44,7 +46,9 @@ export const actions: Actions = {
 				christian_name: christianName,
 				bash_name: bashName,
 				avatar_url: avatarUrl,
-				avatar_emoji: avatarEmoji
+				avatar_emoji: avatarEmoji,
+				subscribed_to_emails: subscribedToEmails,
+				notify_on_mention: notifyOnMention
 			})
 			.eq('id', locals.user.id)
 

@@ -55,6 +55,18 @@
 				/>
 			</div>
 
+			<div class="space-y-3">
+				<p class="text-sm font-medium text-gray-300">Email notifications</p>
+				<label class="flex items-center gap-2">
+					<input type="checkbox" name="subscribed_to_emails" checked class="rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500" />
+					<span class="text-sm text-gray-400">Email me when a new ride is posted</span>
+				</label>
+				<label class="flex items-center gap-2">
+					<input type="checkbox" name="notify_on_mention" checked class="rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500" />
+					<span class="text-sm text-gray-400">Email me when someone mentions me</span>
+				</label>
+			</div>
+
 			{#if form?.message}
 				<p class="text-sm text-red-400">{form.message}</p>
 			{/if}
