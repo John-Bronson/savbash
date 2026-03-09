@@ -315,9 +315,9 @@
 							{:else}
 								<button
 									onclick={() => confirmingDeletePhoto = photo.id}
-									class="text-xs text-gray-600 opacity-0 transition group-hover:opacity-100 hover:text-gray-400"
+									class="text-xs text-gray-500 hover:text-gray-400"
 								>
-									Delete
+									{data.user?.id !== photo.user_id ? 'Delete (admin)' : 'Delete'}
 								</button>
 							{/if}
 						{/if}
@@ -442,9 +442,9 @@
 										{:else}
 											<button
 												onclick={() => confirmingDeleteComment = comment.id}
-												class="ml-2 text-xs text-gray-600 hover:text-gray-500"
+												class="ml-2 text-xs text-gray-500 hover:text-gray-400"
 											>
-												Delete
+												{data.user?.id !== comment.user_id ? 'Delete (admin)' : 'Delete'}
 											</button>
 										{/if}
 									{/if}
