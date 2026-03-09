@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte'
 	import Avatar from '$lib/components/Avatar.svelte'
 	import ImageUpload from '$lib/components/ImageUpload.svelte'
+	import MentionInput from '$lib/components/MentionInput.svelte'
 	import { timeAgo, highlightMentions } from '$lib/utils'
 
 	let { data, form } = $props()
@@ -474,13 +475,12 @@
 				<div class="flex gap-3">
 					<Avatar profile={data.profile} size="sm" />
 					<div class="flex-1">
-						<textarea
-							name="body"
+						<MentionInput
 							bind:value={commentBody}
-							rows="2"
+							name="body"
 							placeholder="Add a comment... Use @ to mention someone"
-							class="block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
-						></textarea>
+							members={data.members}
+						/>
 					</div>
 				</div>
 				<div class="mt-2 flex justify-end">

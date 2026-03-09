@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms'
 	import { goto } from '$app/navigation'
 	import ImageUpload from '$lib/components/ImageUpload.svelte'
+	import PlacesAutocomplete from '$lib/components/PlacesAutocomplete.svelte'
 
 	let { data, form } = $props()
 
@@ -10,6 +11,9 @@
 	let showHare2 = $state(false)
 	let submitting = $state(false)
 	let bannerUrl = $state<string | null>(null)
+	let meetingSpotName = $state('')
+	let meetingSpotLat = $state<number | null>(null)
+	let meetingSpotLng = $state<number | null>(null)
 </script>
 
 <div class="mx-auto max-w-lg">
@@ -71,16 +75,11 @@
 			<label for="meeting_spot_name" class="block text-sm font-medium text-gray-300">
 				Meeting spot <span class="text-red-400">*</span>
 			</label>
-			<input
-				id="meeting_spot_name"
-				name="meeting_spot_name"
-				type="text"
-				required
-				placeholder="e.g. Starbucks on Main St"
-				class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+			<PlacesAutocomplete
+				bind:nameValue={meetingSpotName}
+				bind:latValue={meetingSpotLat}
+				bind:lngValue={meetingSpotLng}
 			/>
-			<input type="hidden" name="meeting_spot_lat" value="" />
-			<input type="hidden" name="meeting_spot_lng" value="" />
 		</div>
 
 		<div>

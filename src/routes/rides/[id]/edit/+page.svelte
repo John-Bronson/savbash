@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
 	import ImageUpload from '$lib/components/ImageUpload.svelte'
+	import PlacesAutocomplete from '$lib/components/PlacesAutocomplete.svelte'
 
 	let { data, form } = $props()
 
@@ -11,6 +12,9 @@
 	let hare2Mode = $state<'member' | 'text'>(data.ride.ride_hares[1]?.user_id ? 'member' : 'text')
 	let showHare2 = $state(!!data.ride.ride_hares[1])
 	let bannerUrl = $state<string | null>(data.ride.image_url)
+	let meetingSpotName = $state(data.ride.meeting_spot_name)
+	let meetingSpotLat = $state<number | null>(data.ride.meeting_spot_lat)
+	let meetingSpotLng = $state<number | null>(data.ride.meeting_spot_lng)
 </script>
 
 <div class="mx-auto max-w-lg">
@@ -68,16 +72,11 @@
 			<label for="meeting_spot_name" class="block text-sm font-medium text-gray-300">
 				Meeting spot <span class="text-red-400">*</span>
 			</label>
-			<input
-				id="meeting_spot_name"
-				name="meeting_spot_name"
-				type="text"
-				required
-				value={data.ride.meeting_spot_name}
-				class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+			<PlacesAutocomplete
+				bind:nameValue={meetingSpotName}
+				bind:latValue={meetingSpotLat}
+				bind:lngValue={meetingSpotLng}
 			/>
-			<input type="hidden" name="meeting_spot_lat" value={data.ride.meeting_spot_lat ?? ''} />
-			<input type="hidden" name="meeting_spot_lng" value={data.ride.meeting_spot_lng ?? ''} />
 		</div>
 
 		<div>

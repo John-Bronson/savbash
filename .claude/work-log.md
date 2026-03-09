@@ -517,8 +517,51 @@ A record of everything done during development, so you can review and learn from
 - `src/routes/rides/[id]/+page.svelte` — updated (banner display, photo gallery, lightbox, OG meta tags, permission panels)
 - `src/routes/rides/[id]/+page.server.ts` — updated (fetches photos, uploadPhoto/deletePhoto actions, passes permission flags)
 
-### Not yet done
-- @mention autocomplete dropdown in comment textarea
-- Google Places Autocomplete for meeting spots
-- Mobile responsiveness testing
-- Loading skeletons / error state improvements
+---
+
+## Session 1 (continued) — Phase 8 Continued: @Mention Autocomplete, Places, Error States
+
+### What we did
+
+1. **Built `MentionInput.svelte` component** (`src/lib/components/MentionInput.svelte`)
+   - Replaces the plain comment textarea with a mention-aware input
+   - Typing `@` triggers a dropdown showing all members + "@everyone"
+   - Dropdown filters as you type, showing matching names with christian name as subtitle
+   - Keyboard navigation: Arrow Up/Down to select, Enter/Tab to insert, Escape to close
+   - Clicking a suggestion inserts `@Name ` at the cursor position and re-focuses the textarea
+   - Dropdown positioned above the textarea to avoid being clipped
+   - "@everyone" appears first with "Notify all RSVPs" subtitle
+
+2. **Built `PlacesAutocomplete.svelte` component** (`src/lib/components/PlacesAutocomplete.svelte`)
+   - Google Places Autocomplete for meeting spot selection on ride create/edit pages
+   - Dynamically loads the Google Maps JS API only when `PUBLIC_GOOGLE_MAPS_API_KEY` is set
+   - When a place is selected, populates the name, latitude, and longitude automatically
+   - Falls back to a plain text input when no API key is configured (works exactly as before)
+   - Hidden inputs for lat/lng are included in the component
+
+3. **Created error page** (`src/routes/+error.svelte`)
+   - Shows the HTTP status code (large, dimmed) and error message
+   - "Back to rides" link to return to the homepage
+   - Handles 404, 403, 500, etc. consistently
+
+4. **Wired everything in**
+   - Ride detail page comment form now uses MentionInput with member list
+   - Ride create and edit pages now use PlacesAutocomplete
+   - Added `PUBLIC_GOOGLE_MAPS_API_KEY` to .env (empty — works without it, activates when key is added)
+   - Server loads member profiles for the mention autocomplete
+
+### Key concepts introduced
+
+- **Cursor-aware autocomplete** — The mention input tracks the cursor position in the textarea to find the `@` trigger character. The query is the text between `@` and the cursor. When a mention is inserted, the cursor is repositioned after the inserted name using `setSelectionRange()`.
+- **Dynamic script loading** — The Google Maps API script is loaded on-demand in `onMount()` rather than in the HTML head, so it only loads on pages that need it and only when an API key is configured.
+- **Graceful degradation** — Both new components work without their optional dependencies: MentionInput works as a plain textarea if no members are passed, PlacesAutocomplete works as a plain text input without an API key.
+
+### Files created/modified
+- `src/lib/components/MentionInput.svelte` — created (@mention autocomplete textarea)
+- `src/lib/components/PlacesAutocomplete.svelte` — created (Google Places meeting spot picker)
+- `src/routes/+error.svelte` — created (error page)
+- `src/routes/rides/[id]/+page.svelte` — updated (uses MentionInput for comments)
+- `src/routes/rides/[id]/+page.server.ts` — updated (fetches member profiles for autocomplete)
+- `src/routes/rides/new/+page.svelte` — updated (uses PlacesAutocomplete)
+- `src/routes/rides/[id]/edit/+page.svelte` — updated (uses PlacesAutocomplete)
+- `.env` — updated (added PUBLIC_GOOGLE_MAPS_API_KEY)

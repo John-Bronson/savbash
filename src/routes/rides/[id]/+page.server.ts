@@ -57,10 +57,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		(r: { user_id: string }) => r.user_id === locals.user?.id
 	)
 
+	// Fetch all member profiles for @mention autocomplete
+	const { data: members } = await locals.supabase
+		.from('profiles')
+		.select('id, christian_name, bash_name')
+		.neq('role', 'pending')
+		.order('christian_name')
+
 	return {
 		ride,
 		photos: photos ?? [],
 		comments: comments ?? [],
+		members: members ?? [],
 		canEdit,
 		isCreator,
 		isHare,
