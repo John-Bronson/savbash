@@ -565,3 +565,36 @@ A record of everything done during development, so you can review and learn from
 - `src/routes/rides/new/+page.svelte` — updated (uses PlacesAutocomplete)
 - `src/routes/rides/[id]/edit/+page.svelte` — updated (uses PlacesAutocomplete)
 - `.env` — updated (added PUBLIC_GOOGLE_MAPS_API_KEY)
+
+---
+
+## Session 2 — 2026-03-09: Members Page & Role Management
+
+### What we did
+
+1. **Created DB migration for role change protection** (`supabase/migrations/20260309000000_protect_role_changes.sql`)
+   - `BEFORE UPDATE` trigger on `profiles` that enforces role change rules at the DB level
+   - `pending → user`: any approved user can do this
+   - All other role changes: admin only
+   - Defense-in-depth — the app also checks, but this prevents bypass via direct Supabase client calls
+
+2. **Created `/members` route** (`src/routes/members/`)
+   - Server load: guards for authenticated non-pending users, fetches all profiles sorted by name
+   - Two form actions: `approve` (any approved user, pending→user) and `changeRole` (admin only, validates role, prevents self-change)
+   - Client-side search filtering with `$state` + `$derived`
+   - Pending section with yellow border, avatar, name, email, approve button
+   - Active members section with avatar, display name (+ christian name if different), role badge, admin role dropdown
+   - Role badges: admin=purple, moderator=blue, user=gray, pending=yellow
+   - Admin dropdown: `<select>` with auto-submit on change, hidden for non-admins and on own row
+
+3. **Added Members nav link** in `+layout.svelte`
+   - Visible to logged-in, non-pending users
+   - Positioned between SavBash logo and the right-side icons
+
+### Files created
+- `supabase/migrations/20260309000000_protect_role_changes.sql`
+- `src/routes/members/+page.server.ts`
+- `src/routes/members/+page.svelte`
+
+### Files modified
+- `src/routes/+layout.svelte` (added Members nav link)
