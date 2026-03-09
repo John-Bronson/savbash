@@ -1,10 +1,14 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { supabase } from '$lib/supabaseClient';
 
 	let email = $state('');
 	let loading = $state(false);
 	let sent = $state(false);
 	let error = $state('');
+	let otp = $state('');
+	let verifying = $state(false);
+	let otpError = $state('');
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -26,6 +30,32 @@
 			sent = true;
 		}
 	}
+
+	async function handleVerifyOtp(e: Event) {
+		e.preventDefault();
+		verifying = true;
+		otpError = '';
+
+		const { error: authError } = await supabase.auth.verifyOtp({
+			email,
+			token: otp,
+			type: 'email'
+		});
+
+		verifying = false;
+
+		if (authError) {
+			otpError = authError.message;
+		} else {
+			goto('/');
+		}
+	}
+
+	function handleResend() {
+		sent = false;
+		otp = '';
+		otpError = '';
+	}
 </script>
 
 <div class="flex min-h-[60vh] items-center justify-center">
@@ -39,6 +69,44 @@
 					We sent a magic link to <strong>{email}</strong>. Click it to sign in.
 				</p>
 			</div>
+
+			<form onsubmit={handleVerifyOtp} class="mt-6 space-y-4">
+				<p class="text-center text-sm text-gray-400">
+					Or enter the 6-digit code from the email:
+				</p>
+				<input
+					type="text"
+					bind:value={otp}
+					maxlength={6}
+					inputmode="numeric"
+					pattern="[0-9]*"
+					autocomplete="one-time-code"
+					placeholder="000000"
+					class="block w-full rounded-md border-gray-700 bg-gray-800 text-center text-2xl tracking-widest text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+				/>
+
+				{#if otpError}
+					<p class="text-sm text-red-400">{otpError}</p>
+				{/if}
+
+				<button
+					type="submit"
+					disabled={verifying || otp.length < 6}
+					class="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+				>
+					{verifying ? 'Verifying...' : 'Verify Code'}
+				</button>
+			</form>
+
+			<p class="mt-4 text-center">
+				<button
+					type="button"
+					onclick={handleResend}
+					class="text-sm text-blue-400 hover:text-blue-300"
+				>
+					Resend code
+				</button>
+			</p>
 		{:else}
 			<form onsubmit={handleSubmit} class="space-y-4">
 				<div>
