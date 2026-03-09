@@ -4,10 +4,10 @@
 		latValue = $bindable<number | null>(null),
 		lngValue = $bindable<number | null>(null)
 	}: {
-		nameValue: string
-		latValue: number | null
-		lngValue: number | null
-	} = $props()
+		nameValue: string;
+		latValue: number | null;
+		lngValue: number | null;
+	} = $props();
 </script>
 
 <div>

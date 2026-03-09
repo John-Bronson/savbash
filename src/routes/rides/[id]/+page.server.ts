@@ -1,39 +1,43 @@
-import { error, fail } from '@sveltejs/kit'
-import { sendMentionNotification } from '$lib/email'
-import type { Actions, PageServerLoad } from './$types'
+import { error, fail } from '@sveltejs/kit';
+import { sendMentionNotification } from '$lib/email';
+import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const { data: ride } = await locals.supabase
 		.from('rides')
-		.select(`
+		.select(
+			`
 			*,
 			creator:profiles!created_by(christian_name, bash_name, avatar_url, avatar_emoji),
 			editor:profiles!updated_by(christian_name, bash_name),
 			ride_hares(*, hare_profile:profiles!user_id(christian_name, bash_name, avatar_url, avatar_emoji)),
 			rsvps(id, user_id, status, rsvp_profile:profiles!user_id(christian_name, bash_name, avatar_url, avatar_emoji))
-		`)
+		`
+		)
 		.eq('id', params.id)
-		.single()
+		.single();
 
-	if (!ride) error(404, 'Ride not found')
+	if (!ride) error(404, 'Ride not found');
 
 	// Fetch photos
 	const { data: photos } = await locals.supabase
 		.from('ride_photos')
 		.select('*, uploader:profiles!user_id(christian_name, bash_name)')
 		.eq('ride_id', params.id)
-		.order('created_at', { ascending: true })
+		.order('created_at', { ascending: true });
 
 	// Fetch comments with profiles and reactions
 	const { data: comments } = await locals.supabase
 		.from('comments')
-		.select(`
+		.select(
+			`
 			*,
 			author:profiles!user_id(christian_name, bash_name, avatar_url, avatar_emoji),
 			reactions(id, user_id, emoji)
-		`)
+		`
+		)
 		.eq('ride_id', params.id)
-		.order('created_at', { ascending: true })
+		.order('created_at', { ascending: true });
 
 	// Mark mentions as read when visiting the ride page
 	if (locals.user) {
@@ -42,27 +46,25 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			.update({ is_read: true })
 			.eq('mentioned_user_id', locals.user.id)
 			.eq('ride_id', params.id)
-			.eq('is_read', false)
+			.eq('is_read', false);
 	}
 
 	// Check permissions
-	const isCreator = locals.user?.id === ride.created_by
+	const isCreator = locals.user?.id === ride.created_by;
 	const isHare = ride.ride_hares.some(
 		(h: { user_id: string | null }) => h.user_id === locals.user?.id
-	)
-	const isMod = locals.profile && ['moderator', 'admin'].includes(locals.profile.role)
-	const canEdit = isCreator || isHare || isMod
+	);
+	const isMod = locals.profile && ['moderator', 'admin'].includes(locals.profile.role);
+	const canEdit = isCreator || isHare || isMod;
 
-	const currentRsvp = ride.rsvps.find(
-		(r: { user_id: string }) => r.user_id === locals.user?.id
-	)
+	const currentRsvp = ride.rsvps.find((r: { user_id: string }) => r.user_id === locals.user?.id);
 
 	// Fetch all member profiles for @mention autocomplete
 	const { data: members } = await locals.supabase
 		.from('profiles')
 		.select('id, christian_name, bash_name')
 		.neq('role', 'pending')
-		.order('christian_name')
+		.order('christian_name');
 
 	return {
 		ride,
@@ -74,18 +76,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		isHare,
 		isMod: !!isMod,
 		currentRsvpStatus: currentRsvp?.status ?? null
-	}
-}
+	};
+};
 
 export const actions: Actions = {
 	rsvp: async ({ request, params, locals }) => {
-		if (!locals.user) return fail(401, { message: 'Not logged in' })
+		if (!locals.user) return fail(401, { message: 'Not logged in' });
 
-		const formData = await request.formData()
-		const status = formData.get('status') as string
+		const formData = await request.formData();
+		const status = formData.get('status') as string;
 
 		if (!['going', 'maybe', 'not_going'].includes(status)) {
-			return fail(400, { message: 'Invalid status' })
+			return fail(400, { message: 'Invalid status' });
 		}
 
 		const { error: rsvpError } = await locals.supabase
@@ -93,39 +95,39 @@ export const actions: Actions = {
 			.upsert(
 				{ ride_id: params.id, user_id: locals.user.id, status },
 				{ onConflict: 'ride_id,user_id' }
-			)
+			);
 
-		if (rsvpError) return fail(500, { message: 'Failed to update RSVP' })
-		return { success: true }
+		if (rsvpError) return fail(500, { message: 'Failed to update RSVP' });
+		return { success: true };
 	},
 
 	comment: async ({ request, params, locals }) => {
-		if (!locals.user) return fail(401, { message: 'Not logged in' })
+		if (!locals.user) return fail(401, { message: 'Not logged in' });
 
-		const formData = await request.formData()
-		const body = (formData.get('body') as string)?.trim()
+		const formData = await request.formData();
+		const body = (formData.get('body') as string)?.trim();
 
-		if (!body) return fail(400, { message: 'Comment cannot be empty' })
+		if (!body) return fail(400, { message: 'Comment cannot be empty' });
 
 		// Insert comment
 		const { data: comment, error: commentError } = await locals.supabase
 			.from('comments')
 			.insert({ ride_id: params.id, user_id: locals.user.id, body })
 			.select('id')
-			.single()
+			.single();
 
-		if (commentError || !comment) return fail(500, { message: 'Failed to post comment' })
+		if (commentError || !comment) return fail(500, { message: 'Failed to post comment' });
 
 		// Parse mentions from comment body
-		const mentionRegex = /@([\w][\w\s]*?)(?=\s@|$|\s(?![\w])|\.|,|!|\?)/g
-		const mentionNames: string[] = []
-		let match
+		const mentionRegex = /@([\w][\w\s]*?)(?=\s@|$|\s(?![\w])|\.|,|!|\?)/g;
+		const mentionNames: string[] = [];
+		let match;
 		while ((match = mentionRegex.exec(body)) !== null) {
-			mentionNames.push(match[1].trim())
+			mentionNames.push(match[1].trim());
 		}
 
 		if (mentionNames.length > 0) {
-			const mentionRows: { comment_id: string; mentioned_user_id: string; ride_id: string }[] = []
+			const mentionRows: { comment_id: string; mentioned_user_id: string; ride_id: string }[] = [];
 
 			for (const name of mentionNames) {
 				if (name.toLowerCase() === 'everyone') {
@@ -134,7 +136,7 @@ export const actions: Actions = {
 						.from('rsvps')
 						.select('user_id')
 						.eq('ride_id', params.id)
-						.in('status', ['going', 'maybe'])
+						.in('status', ['going', 'maybe']);
 
 					if (rsvpUsers) {
 						for (const rsvp of rsvpUsers) {
@@ -143,7 +145,7 @@ export const actions: Actions = {
 									comment_id: comment.id,
 									mentioned_user_id: rsvp.user_id,
 									ride_id: params.id
-								})
+								});
 							}
 						}
 					}
@@ -153,14 +155,14 @@ export const actions: Actions = {
 						.from('profiles')
 						.select('id')
 						.or(`bash_name.ilike.${name},christian_name.ilike.${name}`)
-						.single()
+						.single();
 
 					if (profile && profile.id !== locals.user.id) {
 						mentionRows.push({
 							comment_id: comment.id,
 							mentioned_user_id: profile.id,
 							ride_id: params.id
-						})
+						});
 					}
 				}
 			}
@@ -168,27 +170,28 @@ export const actions: Actions = {
 			// Deduplicate by mentioned_user_id
 			const unique = mentionRows.filter(
 				(row, i, arr) => arr.findIndex((r) => r.mentioned_user_id === row.mentioned_user_id) === i
-			)
+			);
 
 			if (unique.length > 0) {
-				await locals.supabase.from('mentions').insert(unique)
+				await locals.supabase.from('mentions').insert(unique);
 
 				// Send mention notification emails (fire and forget)
-				const commenterName = locals.profile?.bash_name || locals.profile?.christian_name || 'Someone'
+				const commenterName =
+					locals.profile?.bash_name || locals.profile?.christian_name || 'Someone';
 
 				// Get the ride title
 				const { data: ride } = await locals.supabase
 					.from('rides')
 					.select('title')
 					.eq('id', params.id)
-					.single()
+					.single();
 
 				// Get mentioned users' emails and preferences
-				const mentionedIds = unique.map((r) => r.mentioned_user_id)
+				const mentionedIds = unique.map((r) => r.mentioned_user_id);
 				const { data: mentionedProfiles } = await locals.supabase
 					.from('profiles')
 					.select('id, email, notify_on_mention')
-					.in('id', mentionedIds)
+					.in('id', mentionedIds);
 
 				if (mentionedProfiles && ride) {
 					for (const mp of mentionedProfiles) {
@@ -200,21 +203,21 @@ export const actions: Actions = {
 								rideTitle: ride.title,
 								rideId: params.id,
 								commentId: comment.id
-							})
+							});
 						}
 					}
 				}
 			}
 		}
 
-		return { commented: true }
+		return { commented: true };
 	},
 
 	deleteComment: async ({ request, locals }) => {
-		if (!locals.user) return fail(401, { message: 'Not logged in' })
+		if (!locals.user) return fail(401, { message: 'Not logged in' });
 
-		const formData = await request.formData()
-		const commentId = formData.get('comment_id') as string
+		const formData = await request.formData();
+		const commentId = formData.get('comment_id') as string;
 
 		const { error: deleteError } = await locals.supabase
 			.from('comments')
@@ -223,18 +226,18 @@ export const actions: Actions = {
 				deleted_at: new Date().toISOString(),
 				deleted_by: locals.user.id
 			})
-			.eq('id', commentId)
+			.eq('id', commentId);
 
-		if (deleteError) return fail(500, { message: 'Failed to delete comment' })
-		return { success: true }
+		if (deleteError) return fail(500, { message: 'Failed to delete comment' });
+		return { success: true };
 	},
 
 	react: async ({ request, locals }) => {
-		if (!locals.user) return fail(401, { message: 'Not logged in' })
+		if (!locals.user) return fail(401, { message: 'Not logged in' });
 
-		const formData = await request.formData()
-		const commentId = formData.get('comment_id') as string
-		const emoji = formData.get('emoji') as string
+		const formData = await request.formData();
+		const commentId = formData.get('comment_id') as string;
+		const emoji = formData.get('emoji') as string;
 
 		// Check if user already has this exact reaction
 		const { data: existing } = await locals.supabase
@@ -242,84 +245,76 @@ export const actions: Actions = {
 			.select('id, emoji')
 			.eq('comment_id', commentId)
 			.eq('user_id', locals.user.id)
-			.single()
+			.single();
 
 		if (existing) {
 			if (existing.emoji === emoji) {
 				// Same emoji — toggle off (delete)
-				await locals.supabase.from('reactions').delete().eq('id', existing.id)
+				await locals.supabase.from('reactions').delete().eq('id', existing.id);
 			} else {
 				// Different emoji — replace
-				await locals.supabase
-					.from('reactions')
-					.update({ emoji })
-					.eq('id', existing.id)
+				await locals.supabase.from('reactions').update({ emoji }).eq('id', existing.id);
 			}
 		} else {
 			// No existing reaction — insert
 			await locals.supabase
 				.from('reactions')
-				.insert({ comment_id: commentId, user_id: locals.user.id, emoji })
+				.insert({ comment_id: commentId, user_id: locals.user.id, emoji });
 		}
 
-		return { success: true }
+		return { success: true };
 	},
 
 	uploadPhoto: async ({ request, params, locals }) => {
-		if (!locals.user) return fail(401, { message: 'Not logged in' })
+		if (!locals.user) return fail(401, { message: 'Not logged in' });
 
-		const formData = await request.formData()
-		const photoUrl = (formData.get('photo_url') as string)?.trim()
-		const caption = (formData.get('caption') as string)?.trim() || null
+		const formData = await request.formData();
+		const photoUrl = (formData.get('photo_url') as string)?.trim();
+		const caption = (formData.get('caption') as string)?.trim() || null;
 
-		if (!photoUrl) return fail(400, { message: 'No photo provided' })
+		if (!photoUrl) return fail(400, { message: 'No photo provided' });
 
-		const { error: insertError } = await locals.supabase
-			.from('ride_photos')
-			.insert({
-				ride_id: params.id,
-				user_id: locals.user.id,
-				photo_url: photoUrl,
-				caption
-			})
+		const { error: insertError } = await locals.supabase.from('ride_photos').insert({
+			ride_id: params.id,
+			user_id: locals.user.id,
+			photo_url: photoUrl,
+			caption
+		});
 
-		if (insertError) return fail(500, { message: 'Failed to save photo' })
-		return { photoUploaded: true }
+		if (insertError) return fail(500, { message: 'Failed to save photo' });
+		return { photoUploaded: true };
 	},
 
 	deletePhoto: async ({ request, locals }) => {
-		if (!locals.user) return fail(401, { message: 'Not logged in' })
+		if (!locals.user) return fail(401, { message: 'Not logged in' });
 
-		const formData = await request.formData()
-		const photoId = formData.get('photo_id') as string
+		const formData = await request.formData();
+		const photoId = formData.get('photo_id') as string;
 
 		// Check ownership or mod status
 		const { data: photo } = await locals.supabase
 			.from('ride_photos')
 			.select('user_id')
 			.eq('id', photoId)
-			.single()
+			.single();
 
-		if (!photo) return fail(404, { message: 'Photo not found' })
+		if (!photo) return fail(404, { message: 'Photo not found' });
 
-		const isMod = locals.profile && ['moderator', 'admin'].includes(locals.profile.role)
+		const isMod = locals.profile && ['moderator', 'admin'].includes(locals.profile.role);
 		if (photo.user_id !== locals.user.id && !isMod) {
-			return fail(403, { message: 'Not authorized' })
+			return fail(403, { message: 'Not authorized' });
 		}
 
-		await locals.supabase.from('ride_photos').delete().eq('id', photoId)
-		return { photoDeleted: true }
+		await locals.supabase.from('ride_photos').delete().eq('id', photoId);
+		return { photoDeleted: true };
 	},
 
 	deleteRide: async ({ params, locals }) => {
-		if (!locals.user) return fail(401, { message: 'Not logged in' })
+		if (!locals.user) return fail(401, { message: 'Not logged in' });
 
-		const { error: deleteError } = await locals.supabase
-			.from('rides')
-			.delete()
-			.eq('id', params.id)
+		const { error: deleteError } = await locals.supabase.from('rides').delete().eq('id', params.id);
 
-		if (deleteError) return fail(500, { message: 'Failed to delete ride' })
-		return { deleted: true }
+		if (deleteError) return fail(500, { message: 'Failed to delete ride' });
+		return { deleted: true };
 	}
-}
+};

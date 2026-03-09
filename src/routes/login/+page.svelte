@@ -1,38 +1,36 @@
 <script lang="ts">
-	import { supabase } from '$lib/supabaseClient'
+	import { supabase } from '$lib/supabaseClient';
 
-	let email = $state('')
-	let loading = $state(false)
-	let sent = $state(false)
-	let error = $state('')
+	let email = $state('');
+	let loading = $state(false);
+	let sent = $state(false);
+	let error = $state('');
 
 	async function handleSubmit(e: Event) {
-		e.preventDefault()
-		loading = true
-		error = ''
+		e.preventDefault();
+		loading = true;
+		error = '';
 
 		const { error: authError } = await supabase.auth.signInWithOtp({
 			email,
 			options: {
 				emailRedirectTo: `${window.location.origin}/auth/callback`
 			}
-		})
+		});
 
-		loading = false
+		loading = false;
 
 		if (authError) {
-			error = authError.message
+			error = authError.message;
 		} else {
-			sent = true
+			sent = true;
 		}
 	}
 </script>
 
 <div class="flex min-h-[60vh] items-center justify-center">
 	<div class="w-full max-w-sm">
-		<h1 class="mb-6 text-center text-2xl font-bold text-gray-100">
-			Sign in to SavBash
-		</h1>
+		<h1 class="mb-6 text-center text-2xl font-bold text-gray-100">Sign in to SavBash</h1>
 
 		{#if sent}
 			<div class="rounded-lg bg-green-900/50 p-4 text-center text-green-300">
@@ -44,9 +42,7 @@
 		{:else}
 			<form onsubmit={handleSubmit} class="space-y-4">
 				<div>
-					<label for="email" class="block text-sm font-medium text-gray-300">
-						Email address
-					</label>
+					<label for="email" class="block text-sm font-medium text-gray-300"> Email address </label>
 					<input
 						id="email"
 						type="email"

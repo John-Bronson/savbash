@@ -1,16 +1,16 @@
-import type { LayoutServerLoad } from './$types'
+import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
-	let unreadMentionCount = 0
+	let unreadMentionCount = 0;
 
 	if (locals.user) {
 		const { count } = await locals.supabase
 			.from('mentions')
 			.select('*', { count: 'exact', head: true })
 			.eq('mentioned_user_id', locals.user.id)
-			.eq('is_read', false)
+			.eq('is_read', false);
 
-		unreadMentionCount = count ?? 0
+		unreadMentionCount = count ?? 0;
 	}
 
 	return {
@@ -18,5 +18,5 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		user: locals.user,
 		profile: locals.profile,
 		unreadMentionCount
-	}
-}
+	};
+};

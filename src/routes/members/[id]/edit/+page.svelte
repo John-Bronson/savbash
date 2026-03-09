@@ -4,9 +4,13 @@
 
 	let { data, form } = $props();
 
-	let avatarUrl = $state(data.profile?.avatar_url ?? null);
-	let avatarEmoji = $state(data.profile?.avatar_emoji ?? null);
+	let avatarUrl = $state(data.targetProfile?.avatar_url ?? null);
+	let avatarEmoji = $state(data.targetProfile?.avatar_emoji ?? null);
 	let saved = $state(false);
+
+	const displayName = $derived(
+		data.targetProfile?.bash_name || data.targetProfile?.christian_name || '(no name)'
+	);
 
 	$effect(() => {
 		if (form?.success) {
@@ -17,7 +21,11 @@
 </script>
 
 <div class="mx-auto max-w-sm">
-	<h1 class="mb-6 text-2xl font-bold text-gray-100">Your Profile</h1>
+	<a href="/members" class="mb-4 inline-block text-sm text-gray-400 hover:text-gray-200">
+		&larr; Back to members
+	</a>
+
+	<h1 class="mb-6 text-2xl font-bold text-gray-100">Edit Profile — {displayName}</h1>
 
 	{#if saved}
 		<div class="mb-4 rounded-lg bg-green-900/50 p-3 text-center text-sm text-green-300">
@@ -29,9 +37,9 @@
 		<AvatarChooser
 			bind:avatarUrl
 			bind:avatarEmoji
-			christianName={data.profile?.christian_name ?? ''}
-			bashName={data.profile?.bash_name ?? ''}
-			userId={data.userId}
+			christianName={data.targetProfile?.christian_name ?? ''}
+			bashName={data.targetProfile?.bash_name ?? ''}
+			userId={data.targetUserId}
 		/>
 
 		<div>
@@ -43,7 +51,7 @@
 				name="christian_name"
 				type="text"
 				required
-				value={data.profile?.christian_name ?? ''}
+				value={data.targetProfile?.christian_name ?? ''}
 				class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
 			/>
 		</div>
@@ -54,7 +62,7 @@
 				id="bash_name"
 				name="bash_name"
 				type="text"
-				value={data.profile?.bash_name ?? ''}
+				value={data.targetProfile?.bash_name ?? ''}
 				class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
 			/>
 		</div>
@@ -66,7 +74,7 @@
 				<input
 					type="checkbox"
 					name="subscribed_to_emails"
-					checked={data.profile?.subscribed_to_emails ?? true}
+					checked={data.targetProfile?.subscribed_to_emails ?? true}
 					class="rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500"
 				/>
 				<span class="text-sm text-gray-400">Email me when a new ride is posted</span>
@@ -76,7 +84,7 @@
 				<input
 					type="checkbox"
 					name="notify_on_mention"
-					checked={data.profile?.notify_on_mention ?? true}
+					checked={data.targetProfile?.notify_on_mention ?? true}
 					class="rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500"
 				/>
 				<span class="text-sm text-gray-400">Email me when someone @mentions me</span>
@@ -89,7 +97,7 @@
 
 		<div class="flex gap-3">
 			<a
-				href="/"
+				href="/members"
 				class="flex-1 rounded-md border border-gray-700 px-4 py-2 text-center text-gray-300 hover:bg-gray-800"
 			>
 				Cancel

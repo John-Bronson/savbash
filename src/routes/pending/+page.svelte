@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { supabase } from '$lib/supabaseClient'
+	import { supabase } from '$lib/supabaseClient';
 
-	let { data } = $props()
+	let { data } = $props();
 
 	async function signOut() {
-		await supabase.auth.signOut()
-		window.location.href = '/login'
+		await supabase.auth.signOut();
+		window.location.href = '/login';
 	}
 </script>
 
@@ -19,11 +19,6 @@
 		<p class="mb-6 text-sm text-gray-500">
 			Signed in as <strong class="text-gray-300">{data.profile?.christian_name}</strong>
 		</p>
-		<button
-			onclick={signOut}
-			class="text-sm text-gray-400 hover:text-gray-200"
-		>
-			Sign Out
-		</button>
+		<button onclick={signOut} class="text-sm text-gray-400 hover:text-gray-200"> Sign Out </button>
 	</div>
 </div>

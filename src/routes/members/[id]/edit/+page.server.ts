@@ -1,14 +1,32 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
-	if (!locals.user) redirect(303, '/login');
-	return { profile: locals.profile, userId: locals.user.id };
+export const load: PageServerLoad = async ({ locals, params }) => {
+	if (!locals.user || !locals.profile) {
+		redirect(303, '/login');
+	}
+
+	if (locals.profile.role !== 'admin') {
+		error(403, 'Only admins can edit other profiles');
+	}
+
+	const { data: targetProfile } = await locals.supabase
+		.from('profiles')
+		.select('*')
+		.eq('id', params.id)
+		.single();
+
+	if (!targetProfile) {
+		error(404, 'Profile not found');
+	}
+
+	return { targetProfile, targetUserId: params.id };
 };
 
 export const actions: Actions = {
-	default: async ({ request, locals }) => {
-		if (!locals.user) return fail(401, { message: 'Not logged in' });
+	default: async ({ request, locals, params }) => {
+		if (!locals.user || !locals.profile) return fail(401, { message: 'Not logged in' });
+		if (locals.profile.role !== 'admin') return fail(403, { message: 'Not authorized' });
 
 		const formData = await request.formData();
 		const christianName = (formData.get('christian_name') as string)?.trim();
@@ -22,13 +40,13 @@ export const actions: Actions = {
 			return fail(400, { message: 'Christian name is required' });
 		}
 
-		// Check bash_name uniqueness if provided
+		// Check bash_name uniqueness if provided (exclude the target user)
 		if (bashName) {
 			const { data: existing } = await locals.supabase
 				.from('profiles')
 				.select('id')
 				.eq('bash_name', bashName)
-				.neq('id', locals.user.id)
+				.neq('id', params.id)
 				.single();
 
 			if (existing) {
@@ -36,7 +54,7 @@ export const actions: Actions = {
 			}
 		}
 
-		const { error } = await locals.supabase
+		const { error: updateError } = await locals.supabase
 			.from('profiles')
 			.update({
 				christian_name: christianName,
@@ -46,9 +64,9 @@ export const actions: Actions = {
 				subscribed_to_emails: subscribedToEmails,
 				notify_on_mention: notifyOnMention
 			})
-			.eq('id', locals.user.id);
+			.eq('id', params.id);
 
-		if (error) {
+		if (updateError) {
 			return fail(500, { message: 'Something went wrong. Please try again.' });
 		}
 

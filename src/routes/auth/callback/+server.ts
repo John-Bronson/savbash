@@ -1,12 +1,12 @@
-import { redirect } from '@sveltejs/kit'
-import type { RequestHandler } from './$types'
+import { redirect } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url, locals: { supabase } }) => {
-	const code = url.searchParams.get('code')
+	const code = url.searchParams.get('code');
 
 	if (code) {
-		await supabase.auth.exchangeCodeForSession(code)
+		await supabase.auth.exchangeCodeForSession(code);
 	}
 
-	redirect(303, '/')
-}
+	redirect(303, '/');
+};

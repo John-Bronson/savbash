@@ -101,6 +101,20 @@
 					{member.role}
 				</span>
 				{#if data.isAdmin && member.id !== data.currentUserId}
+					<a
+						href="/members/{member.id}/edit"
+						class="rounded p-1 text-gray-500 hover:text-gray-200"
+						title="Edit profile"
+					>
+						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+							/>
+						</svg>
+					</a>
 					<form method="POST" action="?/changeRole" use:enhance>
 						<input type="hidden" name="user_id" value={member.id} />
 						<select

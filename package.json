@@ -43,7 +43,8 @@
 		"@supabase/ssr": "^0.9.0",
 		"@supabase/supabase-js": "^2.98.0",
 		"marked": "^17.0.4",
-		"resend": "^6.9.3"
+		"resend": "^6.9.3",
+		"unicode-emoji-json": "^0.8.0"
 	},
 	"overrides": {
 		"cookie": "^0.7.0"

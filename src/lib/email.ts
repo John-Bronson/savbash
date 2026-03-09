@@ -1,23 +1,26 @@
-import { Resend } from 'resend'
-import { env } from '$env/dynamic/private'
-import { PUBLIC_SITE_URL } from '$env/static/public'
+import { Resend } from 'resend';
+import { env } from '$env/dynamic/private';
+import { PUBLIC_SITE_URL } from '$env/static/public';
 
 function getResend() {
-	return new Resend(env.RESEND_API_KEY)
+	return new Resend(env.RESEND_API_KEY);
 }
 
-const FROM = 'SavBash <admin@savbash.com>'
+const FROM = 'SavBash <admin@savbash.com>';
 
 function formatDate(dateStr: string) {
-	const d = new Date(dateStr)
+	const d = new Date(dateStr);
 	return d.toLocaleDateString('en-US', {
-		weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-	})
+		weekday: 'long',
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric'
+	});
 }
 
 function formatTime(dateStr: string) {
-	const d = new Date(dateStr)
-	return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+	const d = new Date(dateStr);
+	return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
 function emailWrapper(content: string) {
@@ -37,24 +40,24 @@ ${content}
 </div>
 </div>
 </body>
-</html>`
+</html>`;
 }
 
 interface RideEmailData {
-	id: string
-	title: string
-	ride_date: string
-	meeting_spot_name: string
-	description: string | null
-	hares: string[]
+	id: string;
+	title: string;
+	ride_date: string;
+	meeting_spot_name: string;
+	description: string | null;
+	hares: string[];
 }
 
 export async function sendRideAnnouncement(ride: RideEmailData, subscribers: { email: string }[]) {
-	if (!env.RESEND_API_KEY || subscribers.length === 0) return
+	if (!env.RESEND_API_KEY || subscribers.length === 0) return;
 
-	const rideUrl = `${PUBLIC_SITE_URL}/rides/${ride.id}`
-	const hareText = ride.hares.length > 0 ? ride.hares.join(', ') : 'TBD'
-	const descPreview = ride.description?.slice(0, 200) || ''
+	const rideUrl = `${PUBLIC_SITE_URL}/rides/${ride.id}`;
+	const hareText = ride.hares.length > 0 ? ride.hares.join(', ') : 'TBD';
+	const descPreview = ride.description?.slice(0, 200) || '';
 
 	const html = emailWrapper(`
 <h2 style="margin:0 0 16px;color:#f3f4f6;font-size:20px">New Ride Posted!</h2>
@@ -72,9 +75,9 @@ ${descPreview ? `<p style="margin:16px 0 0;color:#d1d5db;font-size:14px">${escap
 <div style="text-align:center;margin-top:24px">
 <a href="${rideUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px">View Ride</a>
 </div>
-`)
+`);
 
-	const emails = subscribers.map((s) => s.email)
+	const emails = subscribers.map((s) => s.email);
 
 	// Resend batch API: send to all at once using BCC
 	try {
@@ -84,26 +87,26 @@ ${descPreview ? `<p style="margin:16px 0 0;color:#d1d5db;font-size:14px">${escap
 			bcc: emails,
 			subject: `New Ride: ${ride.title}`,
 			html
-		})
+		});
 	} catch (err) {
-		console.error('Failed to send ride announcement:', err)
+		console.error('Failed to send ride announcement:', err);
 	}
 }
 
 interface MentionEmailData {
-	mentionedEmail: string
-	mentionerName: string
-	commentBody: string
-	rideTitle: string
-	rideId: string
-	commentId: string
+	mentionedEmail: string;
+	mentionerName: string;
+	commentBody: string;
+	rideTitle: string;
+	rideId: string;
+	commentId: string;
 }
 
 export async function sendMentionNotification(data: MentionEmailData) {
-	if (!env.RESEND_API_KEY) return
+	if (!env.RESEND_API_KEY) return;
 
-	const commentUrl = `${PUBLIC_SITE_URL}/rides/${data.rideId}#comment-${data.commentId}`
-	const preview = data.commentBody.slice(0, 200)
+	const commentUrl = `${PUBLIC_SITE_URL}/rides/${data.rideId}#comment-${data.commentId}`;
+	const preview = data.commentBody.slice(0, 200);
 
 	const html = emailWrapper(`
 <h2 style="margin:0 0 16px;color:#f3f4f6;font-size:18px">
@@ -118,7 +121,7 @@ In <strong style="color:#d1d5db">${escapeHtml(data.rideTitle)}</strong>
 <div style="text-align:center;margin-top:20px">
 <a href="${commentUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">View Comment</a>
 </div>
-`)
+`);
 
 	try {
 		await getResend().emails.send({
@@ -126,9 +129,9 @@ In <strong style="color:#d1d5db">${escapeHtml(data.rideTitle)}</strong>
 			to: data.mentionedEmail,
 			subject: `${data.mentionerName} mentioned you in ${data.rideTitle}`,
 			html
-		})
+		});
 	} catch (err) {
-		console.error('Failed to send mention notification:', err)
+		console.error('Failed to send mention notification:', err);
 	}
 }
 
@@ -137,5 +140,5 @@ function escapeHtml(str: string): string {
 		.replace(/&/g, '&amp;')
 		.replace(/</g, '&lt;')
 		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
+		.replace(/"/g, '&quot;');
 }

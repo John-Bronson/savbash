@@ -70,6 +70,7 @@ A record of everything done during development, so you can review and learn from
 - **Soft delete** — marking a row as deleted rather than removing it, so data is preserved for review.
 
 ### Files modified
+
 - `.claude/cycling-site-implementation-plan.md` — updated rides table, added ride_hares/ride_photos/storage, updated RLS policies, added edit tracking and soft delete
 - `CLAUDE.md` — updated schema summary and key patterns sections
 - `supabase/migrations/20260308000000_initial_schema.sql` — created (full schema, RLS, indexes, storage buckets, triggers)
@@ -95,6 +96,7 @@ A record of everything done during development, so you can review and learn from
 - **Incremental migrations** — rather than editing the original migration file after it's been pushed, you create a new migration that alters the existing schema. Migrations run in order, so the database ends up in the right state. This is why the pending role change is a separate file from the initial schema.
 
 ### Files modified (continued)
+
 - `supabase/migrations/20260308000001_add_pending_role.sql` — created (adds pending role, updates RLS)
 - `src/lib/database.types.ts` — regenerated with updated schema
 - `.claude/work-log.md` — created
@@ -171,6 +173,7 @@ A record of everything done during development, so you can review and learn from
 - **Layout load functions** — `+layout.server.ts` runs before any page under that layout. Data returned from it is available to all child pages. This is how we make auth state accessible everywhere.
 
 ### Files created/modified
+
 - `src/hooks.server.ts` — created (session management, route protection, pending user handling)
 - `src/app.d.ts` — updated (added Locals types for session, user, profile, supabase)
 - `src/lib/supabaseClient.ts` — updated (switched to `createBrowserClient` from `@supabase/ssr`)
@@ -235,6 +238,7 @@ A record of everything done during development, so you can review and learn from
 - **Dynamic routes** — `src/routes/rides/[id]/` uses a bracket parameter in the folder name. SvelteKit extracts the value and passes it as `params.id` in load functions and form actions.
 
 ### Files created/modified
+
 - `src/routes/layout.css` — updated (dark theme base styles)
 - `src/routes/+layout.svelte` — updated (dark nav bar)
 - `src/routes/+page.server.ts` — updated (fetches upcoming + past rides with hares and RSVPs)
@@ -251,6 +255,7 @@ A record of everything done during development, so you can review and learn from
 - `CLAUDE.md` — updated (dark theme convention)
 
 ### Not yet done
+
 - Banner image upload on rides (depends on Phase 5 storage patterns)
 - Google Places Autocomplete for meeting spot (needs API key)
 - Real-time RSVP updates (optional enhancement)
@@ -302,6 +307,7 @@ A record of everything done during development, so you can review and learn from
 - **Deterministic colors** — The initials fallback picks a color by hashing the user's name (summing character codes, modulo the number of colors). This means the same name always gets the same color, even across different pages and sessions.
 
 ### Files created/modified
+
 - `src/lib/components/Avatar.svelte` — created (reusable avatar component)
 - `src/lib/components/AvatarChooser.svelte` — created (avatar picker with photo upload + emoji grid)
 - `src/routes/profile/+page.server.ts` — created (profile edit form action)
@@ -313,6 +319,7 @@ A record of everything done during development, so you can review and learn from
 - `src/routes/rides/[id]/+page.svelte` — updated (avatars in attendee list)
 
 ### Not yet done
+
 - Banner image upload on rides (storage is set up, just needs UI)
 - Phase 6: Comments, mentions, reactions, notifications
 - Phase 7: Email notifications
@@ -374,6 +381,7 @@ A record of everything done during development, so you can review and learn from
 - **Grouped reactions** — Reactions are stored individually in the DB (one row per user per comment) but displayed grouped by emoji with counts. The `groupReactions()` function transforms the flat array into a map of `{ emoji → { count, userReacted } }`.
 
 ### Files created/modified
+
 - `src/lib/utils.ts` — created (timeAgo, highlightMentions helpers)
 - `src/routes/+layout.server.ts` — updated (fetches unread mention count)
 - `src/routes/+layout.svelte` — updated (bell icon with unread badge)
@@ -384,6 +392,7 @@ A record of everything done during development, so you can review and learn from
 - `src/routes/layout.css` — updated (smooth scrolling)
 
 ### Not yet done
+
 - @mention autocomplete dropdown in comment textarea (currently mentions are typed manually)
 - Banner image upload on rides
 - Google Places Autocomplete for meeting spots
@@ -433,6 +442,7 @@ A record of everything done during development, so you can review and learn from
 - **Resend SDK** — A simple wrapper around the Resend API. `resend.emails.send()` takes `from`, `to`, `subject`, and `html` — no complex configuration needed.
 
 ### Files created/modified
+
 - `src/lib/email.ts` — created (email utility with ride announcement + mention notification)
 - `src/routes/rides/new/+page.server.ts` — updated (sends ride announcement after creation)
 - `src/routes/rides/[id]/+page.server.ts` — updated (sends mention notifications after comment)
@@ -441,6 +451,7 @@ A record of everything done during development, so you can review and learn from
 - `.env` — updated (added RESEND_API_KEY and PUBLIC_SITE_URL)
 
 ### Not yet done
+
 - @mention autocomplete dropdown in comment textarea
 - Banner image upload on rides
 - Google Places Autocomplete for meeting spots
@@ -509,6 +520,7 @@ A record of everything done during development, so you can review and learn from
 - **Aspect-ratio thumbnails** — Using `aspect-square` (Tailwind) with `object-cover` creates uniform square thumbnails in the grid regardless of the original photo dimensions.
 
 ### Files created/modified
+
 - `src/lib/components/ImageUpload.svelte` — created (reusable image upload with drag-drop, resize, preview)
 - `src/routes/rides/new/+page.svelte` — updated (banner image upload)
 - `src/routes/rides/new/+page.server.ts` — updated (saves image_url)
@@ -557,6 +569,7 @@ A record of everything done during development, so you can review and learn from
 - **Graceful degradation** — Both new components work without their optional dependencies: MentionInput works as a plain textarea if no members are passed, PlacesAutocomplete works as a plain text input without an API key.
 
 ### Files created/modified
+
 - `src/lib/components/MentionInput.svelte` — created (@mention autocomplete textarea)
 - `src/lib/components/PlacesAutocomplete.svelte` — created (Google Places meeting spot picker)
 - `src/routes/+error.svelte` — created (error page)
@@ -592,9 +605,50 @@ A record of everything done during development, so you can review and learn from
    - Positioned between SavBash logo and the right-side icons
 
 ### Files created
+
 - `supabase/migrations/20260309000000_protect_role_changes.sql`
 - `src/routes/members/+page.server.ts`
 - `src/routes/members/+page.svelte`
 
 ### Files modified
+
 - `src/routes/+layout.svelte` (added Members nav link)
+
+---
+
+## Session 2 (continued) — 2026-03-09: Emoji Picker, Admin Profile Editor, Cancel Buttons
+
+### What we did
+
+1. **Full emoji picker for AvatarChooser**
+   - Installed `unicode-emoji-json` package (lightweight emoji database with names and categories)
+   - Rewrote `AvatarChooser.svelte` to use the full emoji dataset instead of ~60 hardcoded emojis
+   - Added search input that filters emojis by name in real-time
+   - Organized into 9 categories (Smileys & Emotion, People & Body, Animals & Nature, Food & Drink, Travel & Places, Activities, Objects, Symbols, Flags) with sticky headers
+   - Scrollable container (`max-h-64 overflow-y-auto`) with "No emojis found" message
+
+2. **Created admin profile editor** (`/members/[id]/edit`)
+   - Admin-only page for editing any user's profile
+   - Permission check: only `role = 'admin'` can access
+   - Editable fields: avatar (photo/emoji via AvatarChooser), christian name, bash name, email preferences
+   - Server-side validation: christian name required, bash name uniqueness (excluding target user)
+   - "Back to members" link at top, "Profile saved!" confirmation banner
+   - Same visual design as the `/profile` self-edit page
+
+3. **Added Cancel buttons to profile edit pages**
+   - `/profile` — Cancel link (`<a href="/">`) navigates to homepage
+   - `/members/[id]/edit` — Cancel link (`<a href="/members">`) navigates to members list
+   - Both styled as gray outlined buttons in a flex row next to Save Profile
+   - Used `<a>` tags so cancel works without JS (progressive enhancement)
+
+### Files created
+
+- `src/routes/members/[id]/edit/+page.server.ts` — admin profile editor load + form action
+- `src/routes/members/[id]/edit/+page.svelte` — admin profile editor UI
+
+### Files modified
+
+- `package.json`, `package-lock.json` — added `unicode-emoji-json`
+- `src/lib/components/AvatarChooser.svelte` — full emoji picker with search and categories
+- `src/routes/profile/+page.svelte` — cancel button added
+- `src/routes/members/[id]/edit/+page.svelte` — cancel button added

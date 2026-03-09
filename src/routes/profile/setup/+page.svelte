@@ -1,21 +1,17 @@
 <script lang="ts">
-	import { enhance } from '$app/forms'
-	import AvatarChooser from '$lib/components/AvatarChooser.svelte'
+	import { enhance } from '$app/forms';
+	import AvatarChooser from '$lib/components/AvatarChooser.svelte';
 
-	let { data, form } = $props()
+	let { data, form } = $props();
 
-	let avatarUrl = $state(data.profile?.avatar_url ?? null)
-	let avatarEmoji = $state(data.profile?.avatar_emoji ?? null)
+	let avatarUrl = $state(data.profile?.avatar_url ?? null);
+	let avatarEmoji = $state(data.profile?.avatar_emoji ?? null);
 </script>
 
 <div class="flex min-h-[60vh] items-center justify-center">
 	<div class="w-full max-w-sm">
-		<h1 class="mb-2 text-center text-2xl font-bold text-gray-100">
-			Welcome to SavBash!
-		</h1>
-		<p class="mb-6 text-center text-sm text-gray-400">
-			Set up your profile to get started.
-		</p>
+		<h1 class="mb-2 text-center text-2xl font-bold text-gray-100">Welcome to SavBash!</h1>
+		<p class="mb-6 text-center text-sm text-gray-400">Set up your profile to get started.</p>
 
 		<form method="POST" use:enhance class="space-y-5">
 			<AvatarChooser
@@ -42,9 +38,7 @@
 			</div>
 
 			<div>
-				<label for="bash_name" class="block text-sm font-medium text-gray-300">
-					Bash name
-				</label>
+				<label for="bash_name" class="block text-sm font-medium text-gray-300"> Bash name </label>
 				<p class="mt-0.5 text-xs text-gray-500">Your hash name, if you've earned one</p>
 				<input
 					id="bash_name"
@@ -58,11 +52,21 @@
 			<div class="space-y-3">
 				<p class="text-sm font-medium text-gray-300">Email notifications</p>
 				<label class="flex items-center gap-2">
-					<input type="checkbox" name="subscribed_to_emails" checked class="rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500" />
+					<input
+						type="checkbox"
+						name="subscribed_to_emails"
+						checked
+						class="rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500"
+					/>
 					<span class="text-sm text-gray-400">Email me when a new ride is posted</span>
 				</label>
 				<label class="flex items-center gap-2">
-					<input type="checkbox" name="notify_on_mention" checked class="rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500" />
+					<input
+						type="checkbox"
+						name="notify_on_mention"
+						checked
+						class="rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500"
+					/>
 					<span class="text-sm text-gray-400">Email me when someone mentions me</span>
 				</label>
 			</div>

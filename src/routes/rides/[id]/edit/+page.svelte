@@ -1,25 +1,27 @@
 <script lang="ts">
-	import { enhance } from '$app/forms'
-	import ImageUpload from '$lib/components/ImageUpload.svelte'
-	import PlacesAutocomplete from '$lib/components/PlacesAutocomplete.svelte'
+	import { enhance } from '$app/forms';
+	import ImageUpload from '$lib/components/ImageUpload.svelte';
+	import PlacesAutocomplete from '$lib/components/PlacesAutocomplete.svelte';
 
-	let { data, form } = $props()
+	let { data, form } = $props();
 
-	const hare1 = $derived(data.ride.ride_hares[0])
-	const hare2 = $derived(data.ride.ride_hares[1])
+	const hare1 = $derived(data.ride.ride_hares[0]);
+	const hare2 = $derived(data.ride.ride_hares[1]);
 
-	let hare1Mode = $state<'member' | 'text'>(data.ride.ride_hares[0]?.user_id ? 'member' : 'text')
-	let hare2Mode = $state<'member' | 'text'>(data.ride.ride_hares[1]?.user_id ? 'member' : 'text')
-	let showHare2 = $state(!!data.ride.ride_hares[1])
-	let bannerUrl = $state<string | null>(data.ride.image_url)
-	let meetingSpotName = $state(data.ride.meeting_spot_name)
-	let meetingSpotLat = $state<number | null>(data.ride.meeting_spot_lat)
-	let meetingSpotLng = $state<number | null>(data.ride.meeting_spot_lng)
+	let hare1Mode = $state<'member' | 'text'>(data.ride.ride_hares[0]?.user_id ? 'member' : 'text');
+	let hare2Mode = $state<'member' | 'text'>(data.ride.ride_hares[1]?.user_id ? 'member' : 'text');
+	let showHare2 = $state(!!data.ride.ride_hares[1]);
+	let bannerUrl = $state<string | null>(data.ride.image_url);
+	let meetingSpotName = $state(data.ride.meeting_spot_name);
+	let meetingSpotLat = $state<number | null>(data.ride.meeting_spot_lat);
+	let meetingSpotLng = $state<number | null>(data.ride.meeting_spot_lng);
 </script>
 
 <div class="mx-auto max-w-lg">
 	<div class="mb-6">
-		<a href="/rides/{data.ride.id}" class="text-sm text-gray-500 hover:text-gray-400">&larr; Back to ride</a>
+		<a href="/rides/{data.ride.id}" class="text-sm text-gray-500 hover:text-gray-400"
+			>&larr; Back to ride</a
+		>
 	</div>
 
 	<h1 class="mb-6 text-2xl font-bold text-gray-100">Edit Ride</h1>
@@ -80,16 +82,15 @@
 		</div>
 
 		<div>
-			<label for="description" class="block text-sm font-medium text-gray-300">
-				Description
-			</label>
+			<label for="description" class="block text-sm font-medium text-gray-300"> Description </label>
 			<p class="mt-0.5 text-xs text-gray-500">Formatting: **bold**, *italic*, bullet lists</p>
 			<textarea
 				id="description"
 				name="description"
 				rows="4"
 				class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-			>{data.ride.description ?? ''}</textarea>
+				>{data.ride.description ?? ''}</textarea
+			>
 		</div>
 
 		<!-- Banner Image -->
@@ -109,15 +110,19 @@
 			<div class="mt-1 flex gap-2">
 				<button
 					type="button"
-					onclick={() => hare1Mode = 'member'}
-					class="rounded px-2 py-1 text-xs {hare1Mode === 'member' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}"
+					onclick={() => (hare1Mode = 'member')}
+					class="rounded px-2 py-1 text-xs {hare1Mode === 'member'
+						? 'bg-blue-600 text-white'
+						: 'bg-gray-800 text-gray-400'}"
 				>
 					Member
 				</button>
 				<button
 					type="button"
-					onclick={() => hare1Mode = 'text'}
-					class="rounded px-2 py-1 text-xs {hare1Mode === 'text' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}"
+					onclick={() => (hare1Mode = 'text')}
+					class="rounded px-2 py-1 text-xs {hare1Mode === 'text'
+						? 'bg-blue-600 text-white'
+						: 'bg-gray-800 text-gray-400'}"
 				>
 					Not on app
 				</button>
@@ -149,7 +154,7 @@
 		{#if !showHare2}
 			<button
 				type="button"
-				onclick={() => showHare2 = true}
+				onclick={() => (showHare2 = true)}
 				class="text-sm text-blue-400 hover:text-blue-300"
 			>
 				+ Add second hare
@@ -160,7 +165,7 @@
 					<label class="block text-sm font-medium text-gray-300">Hare 2</label>
 					<button
 						type="button"
-						onclick={() => showHare2 = false}
+						onclick={() => (showHare2 = false)}
 						class="text-xs text-gray-500 hover:text-gray-400"
 					>
 						Remove
@@ -169,15 +174,19 @@
 				<div class="mt-1 flex gap-2">
 					<button
 						type="button"
-						onclick={() => hare2Mode = 'member'}
-						class="rounded px-2 py-1 text-xs {hare2Mode === 'member' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}"
+						onclick={() => (hare2Mode = 'member')}
+						class="rounded px-2 py-1 text-xs {hare2Mode === 'member'
+							? 'bg-blue-600 text-white'
+							: 'bg-gray-800 text-gray-400'}"
 					>
 						Member
 					</button>
 					<button
 						type="button"
-						onclick={() => hare2Mode = 'text'}
-						class="rounded px-2 py-1 text-xs {hare2Mode === 'text' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}"
+						onclick={() => (hare2Mode = 'text')}
+						class="rounded px-2 py-1 text-xs {hare2Mode === 'text'
+							? 'bg-blue-600 text-white'
+							: 'bg-gray-800 text-gray-400'}"
 					>
 						Not on app
 					</button>

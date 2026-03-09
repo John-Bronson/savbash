@@ -1,25 +1,28 @@
 <script lang="ts">
-	import { enhance } from '$app/forms'
+	import { enhance } from '$app/forms';
 
-	let { data } = $props()
+	let { data } = $props();
 
 	function rsvpCount(rsvps: { status: string }[], status: string) {
-		return rsvps.filter((r) => r.status === status).length
+		return rsvps.filter((r) => r.status === status).length;
 	}
 
-	function hareDisplayName(hare: { name: string | null; profiles: { christian_name: string; bash_name: string | null } | null }) {
-		if (hare.profiles) return hare.profiles.bash_name || hare.profiles.christian_name
-		return hare.name
+	function hareDisplayName(hare: {
+		name: string | null;
+		profiles: { christian_name: string; bash_name: string | null } | null;
+	}) {
+		if (hare.profiles) return hare.profiles.bash_name || hare.profiles.christian_name;
+		return hare.name;
 	}
 
 	function formatDate(dateStr: string) {
-		const d = new Date(dateStr)
-		return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+		const d = new Date(dateStr);
+		return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 	}
 
 	function formatTime(dateStr: string) {
-		const d = new Date(dateStr)
-		return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+		const d = new Date(dateStr);
+		return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 	}
 </script>
 
@@ -71,7 +74,7 @@
 {/if}
 
 {#if data.pastRides.length > 0}
-	<h2 class="mb-4 mt-12 text-xl font-bold text-gray-100">Past Rides</h2>
+	<h2 class="mt-12 mb-4 text-xl font-bold text-gray-100">Past Rides</h2>
 	<div class="space-y-3">
 		{#each data.pastRides as ride}
 			<a

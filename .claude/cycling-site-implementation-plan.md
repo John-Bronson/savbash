@@ -45,6 +45,7 @@ Each phase produces something working and shippable on its own. You're not block
    - Every push to `main` will now auto-deploy — you'll use this throughout the project
 
 ### Checkpoint
+
 A blank SvelteKit app with Tailwind running locally and deployed on Netlify, with Supabase connected. No UI yet, but your foundation is solid.
 
 ---
@@ -81,15 +82,17 @@ A blank SvelteKit app with Tailwind running locally and deployed on Netlify, wit
    - This is a Hash House Harriers–style group: one or two "hares" lay a trail in flour/chalk and the pack follows. Hare assignments are stored in the separate `ride_hares` table (see step 3b)
 
 3b. **Create the `ride_hares` table**
-   - Fields: `id` (UUID), `ride_id` (references rides, cascade delete), `user_id` (UUID, nullable, references profiles), `name` (text, nullable), `created_at`
-   - Each ride has one or two hares. Each row represents one hare.
-   - Either `user_id` or `name` must be set (add a CHECK constraint: `user_id IS NOT NULL OR name IS NOT NULL`). Use `user_id` when the hare is a registered user on the site, or `name` as plain text for someone who isn't on the app yet (e.g. "Dave's friend Mike")
-   - If a `user_id` is set, the app should display their profile info (avatar, display name). If only `name` is set, just show the text.
+
+- Fields: `id` (UUID), `ride_id` (references rides, cascade delete), `user_id` (UUID, nullable, references profiles), `name` (text, nullable), `created_at`
+- Each ride has one or two hares. Each row represents one hare.
+- Either `user_id` or `name` must be set (add a CHECK constraint: `user_id IS NOT NULL OR name IS NOT NULL`). Use `user_id` when the hare is a registered user on the site, or `name` as plain text for someone who isn't on the app yet (e.g. "Dave's friend Mike")
+- If a `user_id` is set, the app should display their profile info (avatar, display name). If only `name` is set, just show the text.
 
 3c. **Create the `ride_photos` table**
-   - Fields: `id` (UUID), `ride_id` (references rides, cascade delete), `user_id` (references profiles), `photo_url` (text), `caption` (text, nullable), `created_at`
-   - This is the post-ride photo gallery — anyone who attended can upload photos after the event
-   - Photos are stored in a Supabase Storage bucket (see step 8)
+
+- Fields: `id` (UUID), `ride_id` (references rides, cascade delete), `user_id` (references profiles), `photo_url` (text), `caption` (text, nullable), `created_at`
+- This is the post-ride photo gallery — anyone who attended can upload photos after the event
+- Photos are stored in a Supabase Storage bucket (see step 8)
 
 4. **Create the `rsvps` table**
    - Fields: `id` (UUID), `ride_id` (references rides), `user_id` (references profiles), `status` (text: going/maybe/not_going), `created_at`
@@ -126,25 +129,28 @@ A blank SvelteKit app with Tailwind running locally and deployed on Netlify, wit
    - **Note:** If you used Supabase's built-in option to auto-create this trigger when setting up your project, check what columns the generated `profiles` table has — it likely needs `christian_name`, `bash_name`, `role`, `avatar_url`, `avatar_emoji`, `subscribed_to_emails`, and `notify_on_mention` added manually to match the schema above
 
 10. **Enable Row Level Security (RLS) on all tables**
-   - RLS is Supabase's system for controlling who can read/write what. Think of it as database-level permissions.
-   - Turn it ON for every table (it's off by default)
-   - Write policies for each table. Here's the general logic:
-     - **profiles**: Anyone can read. Owner can update their own profile. Moderators and admins can update any profile (e.g. granting bash names). Only admins can change the `role` field.
-     - **rides**: Anyone can read. Only authenticated users can insert. The ride creator, any hare on the ride, or a moderator/admin can update/delete.
-     - **ride_hares**: Anyone can read. The ride creator or a moderator/admin can insert/update/delete hares for a ride.
-     - **ride_photos**: Anyone can read. Only authenticated users can insert. The uploader, a moderator, or an admin can delete.
-     - **rsvps**: Anyone can read. Only authenticated users can insert/update/delete their own RSVPs. Admins can remove any RSVP.
-     - **comments**: Anyone can read. Only authenticated users can insert. The author, a moderator, or an admin can delete.
-     - **reactions**: Anyone can read. Only authenticated users can insert their own reactions. Only the owner can delete their own reaction.
-     - **mentions**: Only the mentioned user can read their own rows. Only authenticated server-side code inserts rows (users never write directly). Users can update only their own rows, and only the `is_read` field. Cascade delete from comments handles cleanup automatically.
-   - RLS means even if someone calls your API directly, they can't access data they shouldn't
+
+- RLS is Supabase's system for controlling who can read/write what. Think of it as database-level permissions.
+- Turn it ON for every table (it's off by default)
+- Write policies for each table. Here's the general logic:
+  - **profiles**: Anyone can read. Owner can update their own profile. Moderators and admins can update any profile (e.g. granting bash names). Only admins can change the `role` field.
+  - **rides**: Anyone can read. Only authenticated users can insert. The ride creator, any hare on the ride, or a moderator/admin can update/delete.
+  - **ride_hares**: Anyone can read. The ride creator or a moderator/admin can insert/update/delete hares for a ride.
+  - **ride_photos**: Anyone can read. Only authenticated users can insert. The uploader, a moderator, or an admin can delete.
+  - **rsvps**: Anyone can read. Only authenticated users can insert/update/delete their own RSVPs. Admins can remove any RSVP.
+  - **comments**: Anyone can read. Only authenticated users can insert. The author, a moderator, or an admin can delete.
+  - **reactions**: Anyone can read. Only authenticated users can insert their own reactions. Only the owner can delete their own reaction.
+  - **mentions**: Only the mentioned user can read their own rows. Only authenticated server-side code inserts rows (users never write directly). Users can update only their own rows, and only the `is_read` field. Cascade delete from comments handles cleanup automatically.
+- RLS means even if someone calls your API directly, they can't access data they shouldn't
 
 11. **Generate TypeScript types**
-   - Install the Supabase CLI and run `supabase gen types typescript --project-id YOUR_PROJECT_ID > src/lib/database.types.ts` to generate TypeScript types for all your tables. To install the CLI: on Mac run `brew install supabase/tap/supabase`, on Windows/Linux follow the instructions at supabase.com/docs/guides/cli/getting-started
-   - Run this now and again any time you change the schema — keeping types in sync means the compiler catches mismatches before they become runtime bugs
-   - Commit the generated types file to your repo so the whole project benefits from them
+
+- Install the Supabase CLI and run `supabase gen types typescript --project-id YOUR_PROJECT_ID > src/lib/database.types.ts` to generate TypeScript types for all your tables. To install the CLI: on Mac run `brew install supabase/tap/supabase`, on Windows/Linux follow the instructions at supabase.com/docs/guides/cli/getting-started
+- Run this now and again any time you change the schema — keeping types in sync means the compiler catches mismatches before they become runtime bugs
+- Commit the generated types file to your repo so the whole project benefits from them
 
 ### Checkpoint
+
 A fully designed database with proper relationships, constraints, security rules, and an auto-trigger for new users. You also have a configured Supabase Storage bucket ready for avatar images. You can verify all of this in the Supabase table editor and Storage dashboard.
 
 ---
@@ -167,11 +173,12 @@ A fully designed database with proper relationships, constraints, security rules
    - Keep the `{{ .ConfirmationURL }}` placeholder — that's the actual link
 
 2b. **Set up custom SMTP so auth emails come from your domain**
-   - By default, Supabase sends auth emails from `noreply@mail.app.supabase.io`. To send from `admin@savbash.com` instead, configure a custom SMTP provider.
-   - In Supabase dashboard → Project Settings → Authentication → SMTP Settings, enable "Custom SMTP" and enter your SMTP credentials.
-   - Resend (which you'll set up in Phase 7) can serve as your SMTP provider — it provides SMTP credentials on your verified domain. This means both auth emails and app emails (ride announcements, mention notifications) come from the same `@savbash.com` address.
-   - Steps: (1) verify `savbash.com` in Resend, (2) get SMTP credentials from Resend dashboard, (3) enter them in Supabase SMTP settings, (4) set sender address to `admin@savbash.com`.
-   - This can wait until Phase 7 when you set up Resend — the default Supabase emails work fine for development.
+
+- By default, Supabase sends auth emails from `noreply@mail.app.supabase.io`. To send from `admin@savbash.com` instead, configure a custom SMTP provider.
+- In Supabase dashboard → Project Settings → Authentication → SMTP Settings, enable "Custom SMTP" and enter your SMTP credentials.
+- Resend (which you'll set up in Phase 7) can serve as your SMTP provider — it provides SMTP credentials on your verified domain. This means both auth emails and app emails (ride announcements, mention notifications) come from the same `@savbash.com` address.
+- Steps: (1) verify `savbash.com` in Resend, (2) get SMTP credentials from Resend dashboard, (3) enter them in Supabase SMTP settings, (4) set sender address to `admin@savbash.com`.
+- This can wait until Phase 7 when you set up Resend — the default Supabase emails work fine for development.
 
 3. **Build the sign-in page**
    - Route: `/login`
@@ -203,6 +210,7 @@ A fully designed database with proper relationships, constraints, security rules
    - Keep it light: a name field, a friendly avatar picker, and a "Let's ride" button. This only ever happens once
 
 ### Checkpoint
+
 Full authentication working end-to-end. You can sign in via email, click the link, land on the site logged in, and sign out. Sessions persist across browser restarts.
 
 ---
@@ -240,7 +248,7 @@ Full authentication working end-to-end. You can sign in via email, click the lin
 5. **Create a ride page (`/rides/new`)**
    - A form with fields for all the `rides` columns: title, date, time, meeting spot, description, and a banner image upload
    - A "Hares" section where the creator can add one or two hares — either by searching for a registered user or typing a name for someone not on the app
-   - The description field supports Markdown — add a small note below it ("Formatting supported: **bold**, *italic*, bullet lists") and use `marked` to render it as HTML on the ride page. Install it with `npm install marked`. The `@tailwindcss/typography` plugin you installed gives the rendered output clean styling for free via the `prose` class
+   - The description field supports Markdown — add a small note below it ("Formatting supported: **bold**, _italic_, bullet lists") and use `marked` to render it as HTML on the ride page. Install it with `npm install marked`. The `@tailwindcss/typography` plugin you installed gives the rendered output clean styling for free via the `prose` class
    - On submit, insert into Supabase and redirect to the new ride's page
    - Validate inputs client-side before submitting (required fields, date must be in the future, etc.)
    - Consider making "Post a Ride" available to any logged-in member, or restricting it to specific admin accounts — your call based on how your group operates
@@ -252,6 +260,7 @@ Full authentication working end-to-end. You can sign in via email, click the lin
    - Your RLS policies from Phase 2 will enforce this at the database level even if someone bypasses the UI
 
 ### Checkpoint
+
 The site is usable. You can post rides, view them, and RSVP. This is your v1 — you could start using it with your group right now.
 
 ---
@@ -291,6 +300,7 @@ The site is usable. You can post rides, view them, and RSVP. This is your v1 —
    - Build this as a single reusable Svelte component (e.g. `Avatar.svelte`) that you drop in anywhere — it accepts a `profile` prop and handles all three cases internally. This way the oversized emoji style is consistent everywhere without duplicating logic
 
 ### Checkpoint
+
 Users can set their avatar as either a uploaded photo or a chosen emoji. Emoji avatars render oversized and bold throughout the site. A single reusable `Avatar.svelte` component handles all three states — photo, emoji, and initials fallback — consistently everywhere.
 
 ---
@@ -362,27 +372,32 @@ Users can set their avatar as either a uploaded photo or a chosen emoji. Emoji a
    - The RLS policy on `mentions` should allow users to update only their own rows (`mentioned_user_id = auth.uid()`) and only the `is_read` field — they shouldn't be able to modify anything else
 
 10. **Emoji reaction picker**
-   - Below each comment, show a small "Add reaction" button (a smiley face icon works well)
-   - Tapping it opens a small popover with a curated set of relevant emojis — keep it short and fun: 👍 ❤️ 😂 🔥 🚴 💪 👏
-   - Don't use a full emoji keyboard — a hand-picked set of 6–8 options is faster to tap and more on-brand
-   - On mobile, the popover should appear above the comment to avoid being hidden behind the keyboard
+
+- Below each comment, show a small "Add reaction" button (a smiley face icon works well)
+- Tapping it opens a small popover with a curated set of relevant emojis — keep it short and fun: 👍 ❤️ 😂 🔥 🚴 💪 👏
+- Don't use a full emoji keyboard — a hand-picked set of 6–8 options is faster to tap and more on-brand
+- On mobile, the popover should appear above the comment to avoid being hidden behind the keyboard
 
 11. **Displaying reactions**
-   - Group reactions by emoji and show counts next to each (e.g. 👍 3  🔥 2)
-   - If the current user has reacted with a given emoji, highlight it distinctly (a filled background works well)
-   - Tapping an emoji the user has already reacted with **removes** their reaction — this is the toggle behavior people expect from emoji reactions
-   - To implement the toggle: attempt an upsert on the `reactions` table, and if the row already exists (thanks to your unique constraint), delete it instead
+
+- Group reactions by emoji and show counts next to each (e.g. 👍 3 🔥 2)
+- If the current user has reacted with a given emoji, highlight it distinctly (a filled background works well)
+- Tapping an emoji the user has already reacted with **removes** their reaction — this is the toggle behavior people expect from emoji reactions
+- To implement the toggle: attempt an upsert on the `reactions` table, and if the row already exists (thanks to your unique constraint), delete it instead
 
 12. **Fetching reactions efficiently**
-   - When loading a ride page, fetch comments and their reaction counts in a single query using a Postgres join rather than making separate requests per comment
-   - Supabase supports this via select with embedded counts: `comments(*, reactions(emoji))` — then group and count in your load function
-   - Also fetch which emojis the current user has reacted with so you can show the highlighted state correctly on page load
+
+- When loading a ride page, fetch comments and their reaction counts in a single query using a Postgres join rather than making separate requests per comment
+- Supabase supports this via select with embedded counts: `comments(*, reactions(emoji))` — then group and count in your load function
+- Also fetch which emojis the current user has reacted with so you can show the highlighted state correctly on page load
 
 13. **Real-time updates (optional)**
-   - Subscribe to both `comments` and `reactions` table changes via Supabase Realtime on the ride page
-   - New comments and reactions appear instantly for everyone viewing the same ride — particularly fun on ride day when people are checking in
+
+- Subscribe to both `comments` and `reactions` table changes via Supabase Realtime on the ride page
+- New comments and reactions appear instantly for everyone viewing the same ride — particularly fun on ride day when people are checking in
 
 ### Checkpoint
+
 Comments, @mentions, emoji reactions, and a notifications inbox are fully working. The bell icon in the nav bar shows a live unread badge count. Clicking a notification links directly to the relevant ride discussion and marks it read. `@everyone` expands to all RSVPed riders at write time, keeping queries fast and simple throughout.
 
 ---
@@ -439,6 +454,7 @@ Comments, @mentions, emoji reactions, and a notifications inbox are fully workin
    - Both pre-checked, with brief plain-language labels
 
 ### Checkpoint
+
 Two email flows working: new ride announcements go to all subscribers, and mention notifications go to the specific users tagged in a comment (or all RSVPed riders for `@everyone`). Both are independently configurable per user.
 
 ---
@@ -487,17 +503,17 @@ Two email flows working: new ride announcements go to all subscribers, and menti
 
 ## Summary Timeline
 
-| Phase | Description | Estimated Time |
-|-------|-------------|----------------|
-| 1 | Project foundation & environment | 2–3 hours |
-| 2 | Database schema & RLS | 2–3 hours |
-| 3 | Authentication (magic links) | 3–4 hours |
-| 4 | Rides & RSVPs | 4–6 hours |
-| 5 | Avatar uploads (photo + emoji) | 3–4 hours |
-| 6 | Comments, mentions, notifications & reactions | 6–8 hours |
-| 7 | Email notifications | 3–4 hours |
-| 8 | Polish & launch | 2–4 hours |
-| **Total** | | **~25–36 hours** |
+| Phase     | Description                                   | Estimated Time   |
+| --------- | --------------------------------------------- | ---------------- |
+| 1         | Project foundation & environment              | 2–3 hours        |
+| 2         | Database schema & RLS                         | 2–3 hours        |
+| 3         | Authentication (magic links)                  | 3–4 hours        |
+| 4         | Rides & RSVPs                                 | 4–6 hours        |
+| 5         | Avatar uploads (photo + emoji)                | 3–4 hours        |
+| 6         | Comments, mentions, notifications & reactions | 6–8 hours        |
+| 7         | Email notifications                           | 3–4 hours        |
+| 8         | Polish & launch                               | 2–4 hours        |
+| **Total** |                                               | **~25–36 hours** |
 
 A focused weekend gets you through phases 1–4 (a working, usable site). Phases 5–7 can happen over a few subsequent evenings.
 

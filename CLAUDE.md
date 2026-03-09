@@ -43,6 +43,7 @@ SavBash is a cycling group event website built with SvelteKit + Supabase + Netli
 ## Database Schema (Supabase)
 
 Eight tables with RLS enabled: `profiles`, `rides`, `ride_hares`, `ride_photos`, `rsvps`, `comments`, `reactions`, `mentions`. Key constraints:
+
 - `profiles.christian_name` is required (real name), `profiles.bash_name` is optional (hash name) with unique constraint
 - Display name logic: show bash name if set, otherwise christian name. @mentions match bash name first, then christian name
 - `ride_hares` has either `user_id` (references profiles) or `name` (text) set — CHECK constraint ensures at least one is present. Cascade deletes from rides
@@ -70,4 +71,4 @@ Eight tables with RLS enabled: `profiles`, `rides`, `ride_hares`, `ride_photos`,
 
 ## Work Log
 
-Maintain a running log of all work done in `.claude/work-log.md`. After each session or significant chunk of work, append a summary including: what was done, key concepts introduced, files modified, and anything not yet completed. This helps the user review and learn from the development process.
+**IMPORTANT: Always update `.claude/work-log.md` before ending a session or after completing a significant chunk of work.** Do not wait to be asked — proactively append a summary including: what was done, key concepts introduced, files created/modified, and anything not yet completed. This helps the user review and learn from the development process.

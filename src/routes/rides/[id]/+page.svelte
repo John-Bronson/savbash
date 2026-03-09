@@ -1,109 +1,137 @@
 <script lang="ts">
-	import { enhance } from '$app/forms'
-	import { goto } from '$app/navigation'
-	import { marked } from 'marked'
-	import { onMount } from 'svelte'
-	import Avatar from '$lib/components/Avatar.svelte'
-	import ImageUpload from '$lib/components/ImageUpload.svelte'
-	import MentionInput from '$lib/components/MentionInput.svelte'
-	import { timeAgo, highlightMentions } from '$lib/utils'
+	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import { marked } from 'marked';
+	import { onMount } from 'svelte';
+	import Avatar from '$lib/components/Avatar.svelte';
+	import ImageUpload from '$lib/components/ImageUpload.svelte';
+	import MentionInput from '$lib/components/MentionInput.svelte';
+	import { timeAgo, highlightMentions } from '$lib/utils';
 
-	let { data, form } = $props()
+	let { data, form } = $props();
 
-	let statusOverride = $state<string | null>(null)
-	let confirmingDelete = $state(false)
-	let commentBody = $state('')
-	let submittingComment = $state(false)
-	let showReactionPicker = $state<string | null>(null)
-	let confirmingDeleteComment = $state<string | null>(null)
-	let photoUrl = $state<string | null>(null)
-	let photoCaption = $state('')
-	let submittingPhoto = $state(false)
-	let showPhotoUpload = $state(false)
-	let lightboxPhoto = $state<string | null>(null)
-	let confirmingDeletePhoto = $state<string | null>(null)
+	let statusOverride = $state<string | null>(null);
+	let confirmingDelete = $state(false);
+	let commentBody = $state('');
+	let submittingComment = $state(false);
+	let showReactionPicker = $state<string | null>(null);
+	let confirmingDeleteComment = $state<string | null>(null);
+	let photoUrl = $state<string | null>(null);
+	let photoCaption = $state('');
+	let submittingPhoto = $state(false);
+	let showPhotoUpload = $state(false);
+	let lightboxPhoto = $state<string | null>(null);
+	let confirmingDeletePhoto = $state<string | null>(null);
 
-	const reactionEmojis = ['👍', '❤️', '😂', '🔥', '🚴', '💪', '👏']
+	const reactionEmojis = ['👍', '❤️', '😂', '🔥', '🚴', '💪', '👏'];
 
-	const currentStatus = $derived(statusOverride ?? data.currentRsvpStatus)
+	const currentStatus = $derived(statusOverride ?? data.currentRsvpStatus);
 
 	const currentUserNames = $derived(
 		[data.profile?.christian_name, data.profile?.bash_name].filter(Boolean) as string[]
-	)
+	);
 
-	function hareDisplayName(hare: { name: string | null; hare_profile: { christian_name: string; bash_name: string | null } | null }) {
-		if (hare.hare_profile) return hare.hare_profile.bash_name || hare.hare_profile.christian_name
-		return hare.name
+	function hareDisplayName(hare: {
+		name: string | null;
+		hare_profile: { christian_name: string; bash_name: string | null } | null;
+	}) {
+		if (hare.hare_profile) return hare.hare_profile.bash_name || hare.hare_profile.christian_name;
+		return hare.name;
 	}
 
 	function formatDate(dateStr: string) {
-		const d = new Date(dateStr)
+		const d = new Date(dateStr);
 		return d.toLocaleDateString('en-US', {
-			weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-		})
+			weekday: 'long',
+			year: 'numeric',
+			month: 'long',
+			day: 'numeric'
+		});
 	}
 
 	function formatTime(dateStr: string) {
-		const d = new Date(dateStr)
-		return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+		const d = new Date(dateStr);
+		return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 	}
 
 	function mapsUrl(lat: number, lng: number) {
-		return `https://www.google.com/maps?q=${lat},${lng}`
+		return `https://www.google.com/maps?q=${lat},${lng}`;
 	}
 
 	const goingRsvps = $derived(
 		data.ride.rsvps.filter((r: { status: string }) => r.status === 'going')
-	)
+	);
 	const maybeRsvps = $derived(
 		data.ride.rsvps.filter((r: { status: string }) => r.status === 'maybe')
-	)
+	);
 
 	const renderedDescription = $derived(
 		data.ride.description ? marked.parse(data.ride.description) : ''
-	)
+	);
 
 	const creatorName = $derived(
 		data.ride.creator?.bash_name || data.ride.creator?.christian_name || 'Unknown'
-	)
+	);
 
 	function groupReactions(reactions: { id: string; user_id: string; emoji: string }[]) {
-		const groups: Record<string, { count: number; userReacted: boolean }> = {}
+		const groups: Record<string, { count: number; userReacted: boolean }> = {};
 		for (const r of reactions) {
-			if (!groups[r.emoji]) groups[r.emoji] = { count: 0, userReacted: false }
-			groups[r.emoji].count++
-			if (r.user_id === data.user?.id) groups[r.emoji].userReacted = true
+			if (!groups[r.emoji]) groups[r.emoji] = { count: 0, userReacted: false };
+			groups[r.emoji].count++;
+			if (r.user_id === data.user?.id) groups[r.emoji].userReacted = true;
 		}
-		return Object.entries(groups)
+		return Object.entries(groups);
 	}
 
 	const rsvpButtons = [
-		{ status: 'going', label: "I'm In", activeClass: 'bg-green-600 text-white', inactiveClass: 'bg-gray-800 text-gray-400 hover:bg-gray-700' },
-		{ status: 'maybe', label: 'Maybe', activeClass: 'bg-yellow-600 text-white', inactiveClass: 'bg-gray-800 text-gray-400 hover:bg-gray-700' },
-		{ status: 'not_going', label: "Can't Make It", activeClass: 'bg-red-600 text-white', inactiveClass: 'bg-gray-800 text-gray-400 hover:bg-gray-700' }
-	]
+		{
+			status: 'going',
+			label: "I'm In",
+			activeClass: 'bg-green-600 text-white',
+			inactiveClass: 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+		},
+		{
+			status: 'maybe',
+			label: 'Maybe',
+			activeClass: 'bg-yellow-600 text-white',
+			inactiveClass: 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+		},
+		{
+			status: 'not_going',
+			label: "Can't Make It",
+			activeClass: 'bg-red-600 text-white',
+			inactiveClass: 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+		}
+	];
 
 	// Highlight targeted comment from URL hash
-	let highlightedCommentId = $state<string | null>(null)
+	let highlightedCommentId = $state<string | null>(null);
 
 	onMount(() => {
 		if (window.location.hash) {
-			const id = window.location.hash.replace('#comment-', '')
-			highlightedCommentId = id
-			setTimeout(() => { highlightedCommentId = null }, 3000)
+			const id = window.location.hash.replace('#comment-', '');
+			highlightedCommentId = id;
+			setTimeout(() => {
+				highlightedCommentId = null;
+			}, 3000);
 		}
-	})
+	});
 </script>
 
 <svelte:head>
 	<title>{data.ride.title} — SavBash</title>
 	<meta property="og:title" content={data.ride.title} />
-	<meta property="og:description" content={`${formatDate(data.ride.ride_date)} at ${formatTime(data.ride.ride_date)} — ${data.ride.meeting_spot_name}`} />
+	<meta
+		property="og:description"
+		content={`${formatDate(data.ride.ride_date)} at ${formatTime(data.ride.ride_date)} — ${data.ride.meeting_spot_name}`}
+	/>
 	{#if data.ride.image_url}
 		<meta property="og:image" content={data.ride.image_url} />
 	{/if}
 	<style>
-		html { scroll-behavior: smooth; }
+		html {
+			scroll-behavior: smooth;
+		}
 	</style>
 </svelte:head>
 
@@ -159,7 +187,7 @@
 
 	<!-- Description -->
 	{#if renderedDescription}
-		<div class="prose prose-invert mb-8 max-w-none">
+		<div class="prose mb-8 max-w-none prose-invert">
 			{@html renderedDescription}
 		</div>
 	{/if}
@@ -170,14 +198,24 @@
 			<h2 class="mb-3 text-lg font-semibold text-gray-200">RSVP</h2>
 			<div class="flex gap-3">
 				{#each rsvpButtons as btn}
-					<form method="POST" action="?/rsvp" use:enhance={() => {
-						statusOverride = btn.status
-						return async ({ update }) => { statusOverride = null; update() }
-					}}>
+					<form
+						method="POST"
+						action="?/rsvp"
+						use:enhance={() => {
+							statusOverride = btn.status;
+							return async ({ update }) => {
+								statusOverride = null;
+								update();
+							};
+						}}
+					>
 						<input type="hidden" name="status" value={btn.status} />
 						<button
 							type="submit"
-							class="rounded-md px-4 py-2 text-sm font-medium transition {currentStatus === btn.status ? btn.activeClass : btn.inactiveClass}"
+							class="rounded-md px-4 py-2 text-sm font-medium transition {currentStatus ===
+							btn.status
+								? btn.activeClass
+								: btn.inactiveClass}"
 						>
 							{btn.label}
 						</button>
@@ -193,7 +231,7 @@
 			<h3 class="mb-2 text-sm font-medium text-gray-400">Going ({goingRsvps.length})</h3>
 			<div class="flex flex-wrap gap-2">
 				{#each goingRsvps as rsvp}
-					<div class="flex items-center gap-2 rounded-full bg-gray-800 py-1 pl-1 pr-3">
+					<div class="flex items-center gap-2 rounded-full bg-gray-800 py-1 pr-3 pl-1">
 						<Avatar profile={rsvp.rsvp_profile} size="sm" />
 						<span class="text-sm text-gray-300">
 							{rsvp.rsvp_profile?.bash_name || rsvp.rsvp_profile?.christian_name}
@@ -209,7 +247,7 @@
 			<h3 class="mb-2 text-sm font-medium text-gray-400">Maybe ({maybeRsvps.length})</h3>
 			<div class="flex flex-wrap gap-2">
 				{#each maybeRsvps as rsvp}
-					<div class="flex items-center gap-2 rounded-full bg-gray-800 py-1 pl-1 pr-3">
+					<div class="flex items-center gap-2 rounded-full bg-gray-800 py-1 pr-3 pl-1">
 						<Avatar profile={rsvp.rsvp_profile} size="sm" />
 						<span class="text-sm text-gray-300">
 							{rsvp.rsvp_profile?.bash_name || rsvp.rsvp_profile?.christian_name}
@@ -229,7 +267,7 @@
 			{#if data.session}
 				<button
 					type="button"
-					onclick={() => showPhotoUpload = !showPhotoUpload}
+					onclick={() => (showPhotoUpload = !showPhotoUpload)}
 					class="text-sm text-blue-400 hover:text-blue-300"
 				>
 					{showPhotoUpload ? 'Cancel' : '+ Add Photo'}
@@ -242,14 +280,14 @@
 				method="POST"
 				action="?/uploadPhoto"
 				use:enhance={() => {
-					submittingPhoto = true
+					submittingPhoto = true;
 					return async ({ update }) => {
-						photoUrl = null
-						photoCaption = ''
-						submittingPhoto = false
-						showPhotoUpload = false
-						update()
-					}
+						photoUrl = null;
+						photoCaption = '';
+						submittingPhoto = false;
+						showPhotoUpload = false;
+						update();
+					};
 				}}
 				class="mb-6 rounded-lg border border-gray-800 bg-gray-900 p-4"
 			>
@@ -289,7 +327,7 @@
 					<div class="group relative">
 						<button
 							type="button"
-							onclick={() => lightboxPhoto = photo.photo_url}
+							onclick={() => (lightboxPhoto = photo.photo_url)}
 							class="block w-full"
 						>
 							<img
@@ -309,13 +347,18 @@
 								<div class="mt-1 flex gap-2">
 									<form method="POST" action="?/deletePhoto" use:enhance>
 										<input type="hidden" name="photo_id" value={photo.id} />
-										<button type="submit" class="text-xs text-red-400 hover:text-red-300">Confirm</button>
+										<button type="submit" class="text-xs text-red-400 hover:text-red-300"
+											>Confirm</button
+										>
 									</form>
-									<button onclick={() => confirmingDeletePhoto = null} class="text-xs text-gray-500">Cancel</button>
+									<button
+										onclick={() => (confirmingDeletePhoto = null)}
+										class="text-xs text-gray-500">Cancel</button
+									>
 								</div>
 							{:else}
 								<button
-									onclick={() => confirmingDeletePhoto = photo.id}
+									onclick={() => (confirmingDeletePhoto = photo.id)}
 									class="text-xs text-gray-500 hover:text-gray-400"
 								>
 									{data.user?.id !== photo.user_id ? 'Delete (admin)' : 'Delete'}
@@ -332,7 +375,7 @@
 	{#if lightboxPhoto}
 		<button
 			type="button"
-			onclick={() => lightboxPhoto = null}
+			onclick={() => (lightboxPhoto = null)}
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
 		>
 			<img
@@ -357,10 +400,13 @@
 			{#each data.comments as comment}
 				<div
 					id="comment-{comment.id}"
-					class="rounded-lg border border-gray-800 p-3 transition-colors duration-1000 {highlightedCommentId === comment.id ? 'border-blue-500 bg-blue-900/20' : 'bg-gray-900'}"
+					class="rounded-lg border border-gray-800 p-3 transition-colors duration-1000 {highlightedCommentId ===
+					comment.id
+						? 'border-blue-500 bg-blue-900/20'
+						: 'bg-gray-900'}"
 				>
 					{#if comment.is_deleted}
-						<p class="text-sm italic text-gray-600">This comment was deleted.</p>
+						<p class="text-sm text-gray-600 italic">This comment was deleted.</p>
 					{:else}
 						<div class="flex items-start gap-3">
 							<Avatar profile={comment.author} size="sm" />
@@ -386,9 +432,12 @@
 											<input type="hidden" name="emoji" value={emoji} />
 											<button
 												type="submit"
-												class="rounded-full px-2 py-0.5 text-sm transition {userReacted ? 'bg-blue-600/30 ring-1 ring-blue-500' : 'bg-gray-800 hover:bg-gray-700'}"
+												class="rounded-full px-2 py-0.5 text-sm transition {userReacted
+													? 'bg-blue-600/30 ring-1 ring-blue-500'
+													: 'bg-gray-800 hover:bg-gray-700'}"
 											>
-												{emoji} {count}
+												{emoji}
+												{count}
 											</button>
 										</form>
 									{/each}
@@ -398,24 +447,31 @@
 										<div class="relative">
 											<button
 												type="button"
-												onclick={() => showReactionPicker = showReactionPicker === comment.id ? null : comment.id}
+												onclick={() =>
+													(showReactionPicker =
+														showReactionPicker === comment.id ? null : comment.id)}
 												class="rounded-full bg-gray-800 px-2 py-0.5 text-sm text-gray-500 hover:bg-gray-700 hover:text-gray-400"
 											>
 												😀+
 											</button>
 											{#if showReactionPicker === comment.id}
-												<div class="absolute bottom-full left-0 z-10 mb-1 flex gap-1 rounded-lg border border-gray-700 bg-gray-800 p-2 shadow-lg">
+												<div
+													class="absolute bottom-full left-0 z-10 mb-1 flex gap-1 rounded-lg border border-gray-700 bg-gray-800 p-2 shadow-lg"
+												>
 													{#each reactionEmojis as emoji}
-														<form method="POST" action="?/react" use:enhance={() => {
-															showReactionPicker = null
-															return async ({ update }) => { update() }
-														}}>
+														<form
+															method="POST"
+															action="?/react"
+															use:enhance={() => {
+																showReactionPicker = null;
+																return async ({ update }) => {
+																	update();
+																};
+															}}
+														>
 															<input type="hidden" name="comment_id" value={comment.id} />
 															<input type="hidden" name="emoji" value={emoji} />
-															<button
-																type="submit"
-																class="rounded p-1 text-lg hover:bg-gray-700"
-															>
+															<button type="submit" class="rounded p-1 text-lg hover:bg-gray-700">
 																{emoji}
 															</button>
 														</form>
@@ -435,14 +491,14 @@
 												</button>
 											</form>
 											<button
-												onclick={() => confirmingDeleteComment = null}
+												onclick={() => (confirmingDeleteComment = null)}
 												class="text-xs text-gray-500 hover:text-gray-400"
 											>
 												Cancel
 											</button>
 										{:else}
 											<button
-												onclick={() => confirmingDeleteComment = comment.id}
+												onclick={() => (confirmingDeleteComment = comment.id)}
 												class="ml-2 text-xs text-gray-500 hover:text-gray-400"
 											>
 												{data.user?.id !== comment.user_id ? 'Delete (admin)' : 'Delete'}
@@ -463,12 +519,12 @@
 				method="POST"
 				action="?/comment"
 				use:enhance={() => {
-					submittingComment = true
+					submittingComment = true;
 					return async ({ update }) => {
-						commentBody = ''
-						submittingComment = false
-						update()
-					}
+						commentBody = '';
+						submittingComment = false;
+						update();
+					};
 				}}
 				class="mt-4"
 			>
@@ -498,10 +554,16 @@
 
 	<!-- Edit/Delete Ride -->
 	{#if data.canEdit}
-		{@const label = data.isMod ? (data.isCreator || data.isHare ? 'Hare / Admin' : 'Admin') : data.isHare ? 'Hare' : 'Your Ride'}
+		{@const label = data.isMod
+			? data.isCreator || data.isHare
+				? 'Hare / Admin'
+				: 'Admin'
+			: data.isHare
+				? 'Hare'
+				: 'Your Ride'}
 		<div class="mt-8 border-t border-gray-800 pt-6">
 			<div class="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
-				<p class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</p>
+				<p class="mb-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">{label}</p>
 				<div class="flex gap-3">
 					<a
 						href="/rides/{data.ride.id}/edit"
@@ -511,15 +573,21 @@
 					</a>
 					{#if !confirmingDelete}
 						<button
-							onclick={() => confirmingDelete = true}
+							onclick={() => (confirmingDelete = true)}
 							class="rounded-md bg-gray-800 px-4 py-2 text-sm text-red-400 hover:bg-gray-700"
 						>
 							Delete Ride
 						</button>
 					{:else}
-						<form method="POST" action="?/deleteRide" use:enhance={() => {
-							return async () => { goto('/') }
-						}}>
+						<form
+							method="POST"
+							action="?/deleteRide"
+							use:enhance={() => {
+								return async () => {
+									goto('/');
+								};
+							}}
+						>
 							<button
 								type="submit"
 								class="rounded-md bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
@@ -528,7 +596,7 @@
 							</button>
 						</form>
 						<button
-							onclick={() => confirmingDelete = false}
+							onclick={() => (confirmingDelete = false)}
 							class="rounded-md bg-gray-800 px-4 py-2 text-sm text-gray-400 hover:bg-gray-700"
 						>
 							Cancel

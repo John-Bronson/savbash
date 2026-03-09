@@ -1,35 +1,39 @@
 <script lang="ts">
-	import { enhance } from '$app/forms'
-	import { goto } from '$app/navigation'
-	import ImageUpload from '$lib/components/ImageUpload.svelte'
-	import PlacesAutocomplete from '$lib/components/PlacesAutocomplete.svelte'
+	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import ImageUpload from '$lib/components/ImageUpload.svelte';
+	import PlacesAutocomplete from '$lib/components/PlacesAutocomplete.svelte';
 
-	let { data, form } = $props()
+	let { data, form } = $props();
 
-	let hare1Mode = $state<'member' | 'text'>('member')
-	let hare2Mode = $state<'member' | 'text'>('member')
-	let showHare2 = $state(false)
-	let submitting = $state(false)
-	let bannerUrl = $state<string | null>(null)
-	let meetingSpotName = $state('')
-	let meetingSpotLat = $state<number | null>(null)
-	let meetingSpotLng = $state<number | null>(null)
+	let hare1Mode = $state<'member' | 'text'>('member');
+	let hare2Mode = $state<'member' | 'text'>('member');
+	let showHare2 = $state(false);
+	let submitting = $state(false);
+	let bannerUrl = $state<string | null>(null);
+	let meetingSpotName = $state('');
+	let meetingSpotLat = $state<number | null>(null);
+	let meetingSpotLng = $state<number | null>(null);
 </script>
 
 <div class="mx-auto max-w-lg">
 	<h1 class="mb-6 text-2xl font-bold text-gray-100">Post a Ride</h1>
 
-	<form method="POST" use:enhance={() => {
-		submitting = true
-		return async ({ result, update }) => {
-			if (result.type === 'redirect') {
-				goto(result.location, { replaceState: true })
-			} else {
-				submitting = false
-				update()
-			}
-		}
-	}} class="space-y-5">
+	<form
+		method="POST"
+		use:enhance={() => {
+			submitting = true;
+			return async ({ result, update }) => {
+				if (result.type === 'redirect') {
+					goto(result.location, { replaceState: true });
+				} else {
+					submitting = false;
+					update();
+				}
+			};
+		}}
+		class="space-y-5"
+	>
 		<div>
 			<label for="title" class="block text-sm font-medium text-gray-300">
 				Title <span class="text-red-400">*</span>
@@ -83,9 +87,7 @@
 		</div>
 
 		<div>
-			<label for="description" class="block text-sm font-medium text-gray-300">
-				Description
-			</label>
+			<label for="description" class="block text-sm font-medium text-gray-300"> Description </label>
 			<p class="mt-0.5 text-xs text-gray-500">Formatting: **bold**, *italic*, bullet lists</p>
 			<textarea
 				id="description"
@@ -109,21 +111,23 @@
 
 		<!-- Hare 1 -->
 		<div>
-			<label class="block text-sm font-medium text-gray-300">
-				Hare 1
-			</label>
+			<label class="block text-sm font-medium text-gray-300"> Hare 1 </label>
 			<div class="mt-1 flex gap-2">
 				<button
 					type="button"
-					onclick={() => hare1Mode = 'member'}
-					class="rounded px-2 py-1 text-xs {hare1Mode === 'member' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}"
+					onclick={() => (hare1Mode = 'member')}
+					class="rounded px-2 py-1 text-xs {hare1Mode === 'member'
+						? 'bg-blue-600 text-white'
+						: 'bg-gray-800 text-gray-400'}"
 				>
 					Member
 				</button>
 				<button
 					type="button"
-					onclick={() => hare1Mode = 'text'}
-					class="rounded px-2 py-1 text-xs {hare1Mode === 'text' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}"
+					onclick={() => (hare1Mode = 'text')}
+					class="rounded px-2 py-1 text-xs {hare1Mode === 'text'
+						? 'bg-blue-600 text-white'
+						: 'bg-gray-800 text-gray-400'}"
 				>
 					Not on app
 				</button>
@@ -154,7 +158,7 @@
 		{#if !showHare2}
 			<button
 				type="button"
-				onclick={() => showHare2 = true}
+				onclick={() => (showHare2 = true)}
 				class="text-sm text-blue-400 hover:text-blue-300"
 			>
 				+ Add second hare
@@ -165,7 +169,7 @@
 					<label class="block text-sm font-medium text-gray-300">Hare 2</label>
 					<button
 						type="button"
-						onclick={() => showHare2 = false}
+						onclick={() => (showHare2 = false)}
 						class="text-xs text-gray-500 hover:text-gray-400"
 					>
 						Remove
@@ -174,15 +178,19 @@
 				<div class="mt-1 flex gap-2">
 					<button
 						type="button"
-						onclick={() => hare2Mode = 'member'}
-						class="rounded px-2 py-1 text-xs {hare2Mode === 'member' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}"
+						onclick={() => (hare2Mode = 'member')}
+						class="rounded px-2 py-1 text-xs {hare2Mode === 'member'
+							? 'bg-blue-600 text-white'
+							: 'bg-gray-800 text-gray-400'}"
 					>
 						Member
 					</button>
 					<button
 						type="button"
-						onclick={() => hare2Mode = 'text'}
-						class="rounded px-2 py-1 text-xs {hare2Mode === 'text' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'}"
+						onclick={() => (hare2Mode = 'text')}
+						class="rounded px-2 py-1 text-xs {hare2Mode === 'text'
+							? 'bg-blue-600 text-white'
+							: 'bg-gray-800 text-gray-400'}"
 					>
 						Not on app
 					</button>

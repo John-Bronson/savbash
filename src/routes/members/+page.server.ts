@@ -13,7 +13,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const { data: members } = await locals.supabase
 		.from('profiles')
 		.select('id, christian_name, bash_name, email, avatar_url, avatar_emoji, role, created_at')
-		.neq('christian_name', '')
 		.order('christian_name', { ascending: true });
 
 	return {
