@@ -652,3 +652,29 @@ A record of everything done during development, so you can review and learn from
 - `src/lib/components/AvatarChooser.svelte` — full emoji picker with search and categories
 - `src/routes/profile/+page.svelte` — cancel button added
 - `src/routes/members/[id]/edit/+page.svelte` — cancel button added
+
+---
+
+## Session 3 — 2026-03-09: OTP Support & Navigation Fix
+
+### What we did
+
+- Added OTP (one-time passcode) support alongside magic links for login
+- Fixed navigation bug so navbar updates correctly after OTP verification using `invalidateAll`
+
+---
+
+## Session 4 — 2026-03-09: SvelteKit + Supabase Developer Guide
+
+### What we did
+
+1. **Created `GUIDE.md`** — a comprehensive (~1800 lines) developer guide for Angular developers learning SvelteKit + Supabase
+   - Uses real code snippets from every major file in the SavBash codebase with file paths
+   - 13 sections covering: components, routing, data loading, form actions, auth, database queries, storage, Tailwind, TypeScript
+   - Every Angular concept mapped to its SvelteKit equivalent with side-by-side comparisons
+   - Quick reference section for common tasks ("how do I add a page?", "how do I protect a route?", etc.)
+   - Summary comparison table of Angular vs SvelteKit concepts
+
+### Files created
+
+- `GUIDE.md` — SvelteKit + Supabase guide for Angular developers
