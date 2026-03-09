@@ -47,7 +47,7 @@
 		if (authError) {
 			otpError = authError.message;
 		} else {
-			goto('/');
+			goto('/', { invalidateAll: true });
 		}
 	}
 
@@ -72,16 +72,16 @@
 
 			<form onsubmit={handleVerifyOtp} class="mt-6 space-y-4">
 				<p class="text-center text-sm text-gray-400">
-					Or enter the code from the email:
+					Or enter the 6-digit code from the email:
 				</p>
 				<input
 					type="text"
 					bind:value={otp}
-					maxlength={8}
+					maxlength={6}
 					inputmode="numeric"
 					pattern="[0-9]*"
 					autocomplete="one-time-code"
-					placeholder="00000000"
+					placeholder="000000"
 					class="block w-full rounded-md border-gray-700 bg-gray-800 text-center text-2xl tracking-widest text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
 				/>
 
