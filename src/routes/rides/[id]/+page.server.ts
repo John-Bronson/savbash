@@ -17,6 +17,13 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	if (!ride) error(404, 'Ride not found')
 
+	// Fetch photos
+	const { data: photos } = await locals.supabase
+		.from('ride_photos')
+		.select('*, uploader:profiles!user_id(christian_name, bash_name)')
+		.eq('ride_id', params.id)
+		.order('created_at', { ascending: true })
+
 	// Fetch comments with profiles and reactions
 	const { data: comments } = await locals.supabase
 		.from('comments')
@@ -52,6 +59,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	return {
 		ride,
+		photos: photos ?? [],
 		comments: comments ?? [],
 		canEdit,
 		isCreator,
@@ -247,6 +255,52 @@ export const actions: Actions = {
 		}
 
 		return { success: true }
+	},
+
+	uploadPhoto: async ({ request, params, locals }) => {
+		if (!locals.user) return fail(401, { message: 'Not logged in' })
+
+		const formData = await request.formData()
+		const photoUrl = (formData.get('photo_url') as string)?.trim()
+		const caption = (formData.get('caption') as string)?.trim() || null
+
+		if (!photoUrl) return fail(400, { message: 'No photo provided' })
+
+		const { error: insertError } = await locals.supabase
+			.from('ride_photos')
+			.insert({
+				ride_id: params.id,
+				user_id: locals.user.id,
+				photo_url: photoUrl,
+				caption
+			})
+
+		if (insertError) return fail(500, { message: 'Failed to save photo' })
+		return { photoUploaded: true }
+	},
+
+	deletePhoto: async ({ request, locals }) => {
+		if (!locals.user) return fail(401, { message: 'Not logged in' })
+
+		const formData = await request.formData()
+		const photoId = formData.get('photo_id') as string
+
+		// Check ownership or mod status
+		const { data: photo } = await locals.supabase
+			.from('ride_photos')
+			.select('user_id')
+			.eq('id', photoId)
+			.single()
+
+		if (!photo) return fail(404, { message: 'Photo not found' })
+
+		const isMod = locals.profile && ['moderator', 'admin'].includes(locals.profile.role)
+		if (photo.user_id !== locals.user.id && !isMod) {
+			return fail(403, { message: 'Not authorized' })
+		}
+
+		await locals.supabase.from('ride_photos').delete().eq('id', photoId)
+		return { photoDeleted: true }
 	},
 
 	deleteRide: async ({ params, locals }) => {

@@ -4,6 +4,7 @@
 	import { marked } from 'marked'
 	import { onMount } from 'svelte'
 	import Avatar from '$lib/components/Avatar.svelte'
+	import ImageUpload from '$lib/components/ImageUpload.svelte'
 	import { timeAgo, highlightMentions } from '$lib/utils'
 
 	let { data, form } = $props()
@@ -14,6 +15,12 @@
 	let submittingComment = $state(false)
 	let showReactionPicker = $state<string | null>(null)
 	let confirmingDeleteComment = $state<string | null>(null)
+	let photoUrl = $state<string | null>(null)
+	let photoCaption = $state('')
+	let submittingPhoto = $state(false)
+	let showPhotoUpload = $state(false)
+	let lightboxPhoto = $state<string | null>(null)
+	let confirmingDeletePhoto = $state<string | null>(null)
 
 	const reactionEmojis = ['👍', '❤️', '😂', '🔥', '🚴', '💪', '👏']
 
@@ -88,6 +95,12 @@
 </script>
 
 <svelte:head>
+	<title>{data.ride.title} — SavBash</title>
+	<meta property="og:title" content={data.ride.title} />
+	<meta property="og:description" content={`${formatDate(data.ride.ride_date)} at ${formatTime(data.ride.ride_date)} — ${data.ride.meeting_spot_name}`} />
+	{#if data.ride.image_url}
+		<meta property="og:image" content={data.ride.image_url} />
+	{/if}
 	<style>
 		html { scroll-behavior: smooth; }
 	</style>
@@ -98,6 +111,16 @@
 	<div class="mb-6">
 		<a href="/" class="text-sm text-gray-500 hover:text-gray-400">&larr; Back to rides</a>
 	</div>
+
+	<!-- Banner Image -->
+	{#if data.ride.image_url}
+		<img
+			src={data.ride.image_url}
+			alt={data.ride.title}
+			class="mb-6 w-full rounded-lg object-cover"
+			style="max-height: 300px"
+		/>
+	{/if}
 
 	<h1 class="mb-2 text-3xl font-bold text-gray-100">{data.ride.title}</h1>
 
@@ -194,6 +217,129 @@
 				{/each}
 			</div>
 		</div>
+	{/if}
+
+	<!-- Photos -->
+	<div class="mt-8 border-t border-gray-800 pt-6">
+		<div class="mb-4 flex items-center justify-between">
+			<h2 class="text-lg font-semibold text-gray-200">
+				Photos ({data.photos.length})
+			</h2>
+			{#if data.session}
+				<button
+					type="button"
+					onclick={() => showPhotoUpload = !showPhotoUpload}
+					class="text-sm text-blue-400 hover:text-blue-300"
+				>
+					{showPhotoUpload ? 'Cancel' : '+ Add Photo'}
+				</button>
+			{/if}
+		</div>
+
+		{#if showPhotoUpload}
+			<form
+				method="POST"
+				action="?/uploadPhoto"
+				use:enhance={() => {
+					submittingPhoto = true
+					return async ({ update }) => {
+						photoUrl = null
+						photoCaption = ''
+						submittingPhoto = false
+						showPhotoUpload = false
+						update()
+					}
+				}}
+				class="mb-6 rounded-lg border border-gray-800 bg-gray-900 p-4"
+			>
+				<ImageUpload
+					bucket="ride-photos"
+					path={`${data.ride.id}/${crypto.randomUUID()}.webp`}
+					bind:value={photoUrl}
+					label="Drop a photo or click to upload"
+				/>
+				<input type="hidden" name="photo_url" value={photoUrl ?? ''} />
+				<input
+					name="caption"
+					type="text"
+					bind:value={photoCaption}
+					placeholder="Caption (optional)"
+					class="mt-3 block w-full rounded-md border-gray-700 bg-gray-800 text-sm text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+				/>
+				<div class="mt-3 flex justify-end">
+					<button
+						type="submit"
+						disabled={!photoUrl || submittingPhoto}
+						class="rounded-md bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+					>
+						{submittingPhoto ? 'Uploading...' : 'Add Photo'}
+					</button>
+				</div>
+			</form>
+		{/if}
+
+		{#if data.photos.length === 0 && !showPhotoUpload}
+			<p class="text-sm text-gray-500">No photos yet.</p>
+		{/if}
+
+		{#if data.photos.length > 0}
+			<div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+				{#each data.photos as photo}
+					<div class="group relative">
+						<button
+							type="button"
+							onclick={() => lightboxPhoto = photo.photo_url}
+							class="block w-full"
+						>
+							<img
+								src={photo.photo_url}
+								alt={photo.caption || 'Ride photo'}
+								class="aspect-square w-full rounded-lg object-cover transition group-hover:brightness-110"
+							/>
+						</button>
+						{#if photo.caption}
+							<p class="mt-1 truncate text-xs text-gray-500">{photo.caption}</p>
+						{/if}
+						<p class="text-xs text-gray-600">
+							{photo.uploader?.bash_name || photo.uploader?.christian_name}
+						</p>
+						{#if data.user?.id === photo.user_id || data.isMod}
+							{#if confirmingDeletePhoto === photo.id}
+								<div class="mt-1 flex gap-2">
+									<form method="POST" action="?/deletePhoto" use:enhance>
+										<input type="hidden" name="photo_id" value={photo.id} />
+										<button type="submit" class="text-xs text-red-400 hover:text-red-300">Confirm</button>
+									</form>
+									<button onclick={() => confirmingDeletePhoto = null} class="text-xs text-gray-500">Cancel</button>
+								</div>
+							{:else}
+								<button
+									onclick={() => confirmingDeletePhoto = photo.id}
+									class="text-xs text-gray-600 opacity-0 transition group-hover:opacity-100 hover:text-gray-400"
+								>
+									Delete
+								</button>
+							{/if}
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
+
+	<!-- Lightbox -->
+	{#if lightboxPhoto}
+		<button
+			type="button"
+			onclick={() => lightboxPhoto = null}
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+		>
+			<img
+				src={lightboxPhoto}
+				alt="Full size photo"
+				class="max-h-full max-w-full rounded-lg object-contain"
+			/>
+		</button>
 	{/if}
 
 	<!-- Comments -->

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
+	import ImageUpload from '$lib/components/ImageUpload.svelte'
 
 	let { data, form } = $props()
 
@@ -9,6 +10,7 @@
 	let hare1Mode = $state<'member' | 'text'>(data.ride.ride_hares[0]?.user_id ? 'member' : 'text')
 	let hare2Mode = $state<'member' | 'text'>(data.ride.ride_hares[1]?.user_id ? 'member' : 'text')
 	let showHare2 = $state(!!data.ride.ride_hares[1])
+	let bannerUrl = $state<string | null>(data.ride.image_url)
 </script>
 
 <div class="mx-auto max-w-lg">
@@ -89,6 +91,17 @@
 				rows="4"
 				class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
 			>{data.ride.description ?? ''}</textarea>
+		</div>
+
+		<!-- Banner Image -->
+		<div>
+			<label class="mb-1 block text-sm font-medium text-gray-300">Banner image</label>
+			<ImageUpload
+				bucket="ride-images"
+				path={`banners/${data.ride.id}.webp`}
+				bind:value={bannerUrl}
+				label="Drop an image or click to upload"
+			/>
 		</div>
 
 		<!-- Hare 1 -->

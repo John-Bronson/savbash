@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms'
 	import { goto } from '$app/navigation'
+	import ImageUpload from '$lib/components/ImageUpload.svelte'
 
 	let { data, form } = $props()
 
@@ -8,6 +9,7 @@
 	let hare2Mode = $state<'member' | 'text'>('member')
 	let showHare2 = $state(false)
 	let submitting = $state(false)
+	let bannerUrl = $state<string | null>(null)
 </script>
 
 <div class="mx-auto max-w-lg">
@@ -93,6 +95,17 @@
 				placeholder="Trail details, what to bring, etc."
 				class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
 			></textarea>
+		</div>
+
+		<!-- Banner Image -->
+		<div>
+			<label class="mb-1 block text-sm font-medium text-gray-300">Banner image</label>
+			<ImageUpload
+				bucket="ride-images"
+				path={`banners/${crypto.randomUUID()}.webp`}
+				bind:value={bannerUrl}
+				label="Drop an image or click to upload"
+			/>
 		</div>
 
 		<!-- Hare 1 -->

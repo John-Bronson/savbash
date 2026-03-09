@@ -445,3 +445,80 @@ A record of everything done during development, so you can review and learn from
 - Banner image upload on rides
 - Google Places Autocomplete for meeting spots
 - Phase 8: Polish & launch
+
+---
+
+## Session 1 (continued) — Phase 8: Photos, Banner Images & Polish
+
+### What we did
+
+1. **Created `ImageUpload.svelte` component** (`src/lib/components/ImageUpload.svelte`)
+   - Reusable image upload component used for both banner images and gallery photos
+   - Drag-and-drop support with visual feedback (blue border on drag over)
+   - Client-side resize via `OffscreenCanvas` — scales down to max width (default 1200px) and converts to WebP
+   - Live preview of uploaded image with "Remove" button
+   - Accepts `bucket`, `path`, `maxWidth`, `label` props — works with any Supabase storage bucket
+   - Uses `$bindable` for the `value` prop so parent forms can read the URL
+   - Hidden `<input name="image_url">` for form submission
+
+2. **Added banner image upload to ride creation** (`/rides/new`)
+   - ImageUpload component between description and hare picker
+   - Uploads to `ride-images` bucket with path `banners/{uuid}.webp`
+   - Server action saves the URL as `rides.image_url`
+
+3. **Added banner image upload to ride editing** (`/rides/[id]/edit`)
+   - Same component, pre-populated with existing banner if one exists
+   - Uploads to `ride-images` bucket with path `banners/{ride_id}.webp` (overwrites on re-upload)
+   - Server action updates `image_url` along with other ride fields
+
+4. **Added banner image display on ride detail page**
+   - Full-width rounded image at the top of the ride page, max 300px tall, object-cover
+   - Only renders if the ride has an `image_url`
+
+5. **Built the photo gallery on ride detail page** (`/rides/[id]`)
+   - Section between attendees and comments with photo count in the header
+   - "+ Add Photo" button (logged-in users only) reveals an upload form with:
+     - ImageUpload component uploading to `ride-photos` bucket
+     - Optional caption text input
+     - Submit button (disabled until photo is uploaded)
+   - Photo grid: 2 columns on mobile, 3 on larger screens, square aspect-ratio thumbnails
+   - **Lightbox**: clicking a photo opens it full-screen on a dark overlay, click to dismiss
+   - **Delete button**: appears on hover for the uploader or mods, with inline confirmation
+   - Photo metadata: caption, uploader name displayed below each thumbnail
+
+6. **Added server actions for photos**
+   - `uploadPhoto` — inserts a `ride_photos` row with the URL, caption, ride_id, and user_id
+   - `deletePhoto` — checks ownership or mod status before deleting the row
+
+7. **Added Open Graph meta tags** to ride detail page
+   - `og:title` — ride title
+   - `og:description` — date, time, and meeting spot
+   - `og:image` — banner image (if set)
+   - Page `<title>` set to "{ride title} — SavBash"
+
+8. **Added permission-labeled panels for ride management**
+   - Edit/Delete buttons now grouped in a labeled panel showing WHY the user has access
+   - Labels: "Your Ride" (creator), "Hare" (hare for this ride), "Admin" (moderator/admin), "Hare / Admin" (both)
+   - Server now passes `isCreator`, `isHare`, `isMod` booleans to the frontend
+
+### Key concepts introduced
+
+- **Drag and drop uploads** — HTML5 drag and drop events (`ondragover`, `ondragleave`, `ondrop`) let users drag files directly onto the upload zone. The `e.preventDefault()` call is essential to stop the browser from navigating to the file.
+- **Lightbox pattern** — A fixed-position overlay (`fixed inset-0 z-50`) with a dark background that shows the full-size image. Click anywhere to dismiss. Simple and effective without any library.
+- **Open Graph meta tags** — `og:title`, `og:description`, and `og:image` control how links appear when shared in iMessage, Slack, Discord, etc. SvelteKit's `<svelte:head>` block makes it easy to set per-page meta tags.
+- **Aspect-ratio thumbnails** — Using `aspect-square` (Tailwind) with `object-cover` creates uniform square thumbnails in the grid regardless of the original photo dimensions.
+
+### Files created/modified
+- `src/lib/components/ImageUpload.svelte` — created (reusable image upload with drag-drop, resize, preview)
+- `src/routes/rides/new/+page.svelte` — updated (banner image upload)
+- `src/routes/rides/new/+page.server.ts` — updated (saves image_url)
+- `src/routes/rides/[id]/edit/+page.svelte` — updated (banner image upload)
+- `src/routes/rides/[id]/edit/+page.server.ts` — updated (saves image_url)
+- `src/routes/rides/[id]/+page.svelte` — updated (banner display, photo gallery, lightbox, OG meta tags, permission panels)
+- `src/routes/rides/[id]/+page.server.ts` — updated (fetches photos, uploadPhoto/deletePhoto actions, passes permission flags)
+
+### Not yet done
+- @mention autocomplete dropdown in comment textarea
+- Google Places Autocomplete for meeting spots
+- Mobile responsiveness testing
+- Loading skeletons / error state improvements

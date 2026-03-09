@@ -50,6 +50,7 @@ export const actions: Actions = {
 		const meetingSpotName = (formData.get('meeting_spot_name') as string)?.trim()
 		const meetingSpotLat = formData.get('meeting_spot_lat') as string
 		const meetingSpotLng = formData.get('meeting_spot_lng') as string
+		const imageUrl = (formData.get('image_url') as string)?.trim() || null
 		const hare1Id = formData.get('hare1_id') as string
 		const hare1Name = (formData.get('hare1_name') as string)?.trim()
 		const hare2Id = formData.get('hare2_id') as string
@@ -71,6 +72,7 @@ export const actions: Actions = {
 				meeting_spot_name: meetingSpotName,
 				meeting_spot_lat: meetingSpotLat ? parseFloat(meetingSpotLat) : null,
 				meeting_spot_lng: meetingSpotLng ? parseFloat(meetingSpotLng) : null,
+				image_url: imageUrl,
 				updated_at: new Date().toISOString(),
 				updated_by: locals.user.id
 			})
