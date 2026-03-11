@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import AvatarChooser from '$lib/components/AvatarChooser.svelte';
 
 	let { data, form } = $props();
@@ -7,17 +8,11 @@
 	let avatarUrl = $state(data.targetProfile?.avatar_url ?? null);
 	let avatarEmoji = $state(data.targetProfile?.avatar_emoji ?? null);
 	let saved = $state(false);
+	let saving = $state(false);
 
 	const displayName = $derived(
 		data.targetProfile?.bash_name || data.targetProfile?.christian_name || '(no name)'
 	);
-
-	$effect(() => {
-		if (form?.success) {
-			saved = true;
-			setTimeout(() => (saved = false), 3000);
-		}
-	});
 </script>
 
 <div class="mx-auto max-w-sm">
@@ -36,7 +31,22 @@
 		</div>
 	{/if}
 
-	<form method="POST" use:enhance class="space-y-5">
+	<form
+		method="POST"
+		use:enhance={() => {
+			saving = true;
+			return async ({ update, result }) => {
+				await update({ reset: false });
+				if (result.type === 'success') {
+					await invalidateAll();
+					saved = true;
+					setTimeout(() => (saved = false), 3000);
+				}
+				saving = false;
+			};
+		}}
+		class="space-y-5"
+	>
 		<AvatarChooser
 			bind:avatarUrl
 			bind:avatarEmoji
@@ -107,9 +117,10 @@
 			</a>
 			<button
 				type="submit"
-				class="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+				disabled={saving}
+				class="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
 			>
-				Save Profile
+				{saving ? 'Saving...' : 'Save Profile'}
 			</button>
 		</div>
 	</form>
