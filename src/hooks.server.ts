@@ -79,6 +79,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		event.locals.profile.role === 'pending' &&
 		path !== '/pending' &&
 		path !== '/profile/setup' &&
+		path !== '/profile' &&
 		!isPublicPath
 	) {
 		redirect(303, '/pending');

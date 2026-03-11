@@ -25,7 +25,10 @@
 		&larr; Back to members
 	</a>
 
-	<h1 class="mb-6 text-2xl font-bold text-gray-100">Edit Profile — {displayName}</h1>
+	<h1 class="mb-2 text-2xl font-bold text-gray-100">Edit Profile — {displayName}</h1>
+	{#if data.targetProfile.email}
+		<p class="mb-6 text-sm text-gray-500">{data.targetProfile.email}</p>
+	{/if}
 
 	{#if saved}
 		<div class="mb-4 rounded-lg bg-green-900/50 p-3 text-center text-sm text-green-300">

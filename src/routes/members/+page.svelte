@@ -10,8 +10,10 @@
 		data.members.filter(
 			(m) =>
 				m.role === 'pending' &&
-				(m.christian_name?.toLowerCase().includes(search.toLowerCase()) ||
-					m.bash_name?.toLowerCase().includes(search.toLowerCase()))
+				(!search ||
+					m.christian_name?.toLowerCase().includes(search.toLowerCase()) ||
+					m.bash_name?.toLowerCase().includes(search.toLowerCase()) ||
+					m.email?.toLowerCase().includes(search.toLowerCase()))
 		)
 	);
 
@@ -59,7 +61,7 @@
 					<div class="flex items-center gap-3">
 						<Avatar profile={member} size="sm" />
 						<div>
-							<span class="font-medium text-gray-100">{member.christian_name}</span>
+							<span class="font-medium text-gray-100">{member.christian_name ?? '(no name yet)'}</span>
 							{#if member.email}
 								<span class="ml-2 text-sm text-gray-500">{member.email}</span>
 							{/if}

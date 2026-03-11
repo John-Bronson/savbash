@@ -19,6 +19,8 @@
 		<p class="mb-6 text-sm text-gray-500">
 			Signed in as <strong class="text-gray-300">{data.profile?.christian_name}</strong>
 		</p>
+		<a href="/profile" class="text-sm text-gray-400 hover:text-gray-200">Edit Profile</a>
+		<span class="mx-2 text-gray-600">·</span>
 		<button onclick={signOut} class="text-sm text-gray-400 hover:text-gray-200"> Sign Out </button>
 	</div>
 </div>
