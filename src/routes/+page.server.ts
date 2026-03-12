@@ -1,4 +1,5 @@
 import { fail } from '@sveltejs/kit';
+import { sendApprovalNotification } from '$lib/email';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -64,6 +65,19 @@ export const actions: Actions = {
 
 		if (error) {
 			return fail(500, { message: 'Failed to approve user' });
+		}
+
+		const { data: approvedUser } = await locals.supabase
+			.from('profiles')
+			.select('email, christian_name')
+			.eq('id', userId)
+			.single();
+
+		if (approvedUser?.email) {
+			sendApprovalNotification({
+				email: approvedUser.email,
+				christianName: approvedUser.christian_name
+			});
 		}
 
 		return { success: true };

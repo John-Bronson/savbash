@@ -135,6 +135,36 @@ In <strong style="color:#d1d5db">${escapeHtml(data.rideTitle)}</strong>
 	}
 }
 
+interface ApprovalEmailData {
+	email: string;
+	christianName: string;
+}
+
+export async function sendApprovalNotification(data: ApprovalEmailData) {
+	if (!env.RESEND_API_KEY) return;
+
+	const html = emailWrapper(`
+<h2 style="margin:0 0 16px;color:#f3f4f6;font-size:20px">You're in! 🎉</h2>
+<p style="margin:0 0 16px;color:#d1d5db;font-size:15px">
+Hey ${escapeHtml(data.christianName)}, your SavBash account has been approved. You can now view rides, RSVP, and join the conversation.
+</p>
+<div style="text-align:center;margin-top:24px">
+<a href="${PUBLIC_SITE_URL}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px">Get Started</a>
+</div>
+`);
+
+	try {
+		await getResend().emails.send({
+			from: FROM,
+			to: data.email,
+			subject: "You've been approved — welcome to SavBash!",
+			html
+		});
+	} catch (err) {
+		console.error('Failed to send approval notification:', err);
+	}
+}
+
 function escapeHtml(str: string): string {
 	return str
 		.replace(/&/g, '&amp;')

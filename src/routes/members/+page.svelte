@@ -34,6 +34,8 @@
 		pending: 'bg-yellow-900 text-yellow-300'
 	};
 
+	let confirmingRestrict = $state<string | null>(null);
+
 	function displayName(member: { christian_name: string; bash_name: string | null }) {
 		return member.bash_name || member.christian_name;
 	}
@@ -130,6 +132,39 @@
 							<option value="admin">admin</option>
 						</select>
 					</form>
+					{#if confirmingRestrict === member.id}
+						<form method="POST" action="?/restrict" use:enhance={() => {
+							return async ({ update }) => {
+								confirmingRestrict = null;
+								await update();
+							};
+						}}>
+							<input type="hidden" name="user_id" value={member.id} />
+							<div class="flex gap-1">
+								<button
+									type="submit"
+									class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
+								>
+									Confirm
+								</button>
+								<button
+									type="button"
+									onclick={() => (confirmingRestrict = null)}
+									class="rounded bg-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-gray-600"
+								>
+									Cancel
+								</button>
+							</div>
+						</form>
+					{:else}
+						<button
+							type="button"
+							onclick={() => (confirmingRestrict = member.id)}
+							class="rounded bg-red-900 px-2 py-1 text-xs text-red-300 hover:bg-red-800"
+						>
+							Restrict
+						</button>
+					{/if}
 				{/if}
 			</div>
 		</div>

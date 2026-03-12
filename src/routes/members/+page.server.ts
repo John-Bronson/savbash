@@ -1,4 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
+import { sendApprovalNotification } from '$lib/email';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -41,6 +42,45 @@ export const actions: Actions = {
 
 		if (error) {
 			return fail(500, { message: 'Failed to approve user' });
+		}
+
+		const { data: approvedUser } = await locals.supabase
+			.from('profiles')
+			.select('email, christian_name')
+			.eq('id', userId)
+			.single();
+
+		if (approvedUser?.email) {
+			sendApprovalNotification({
+				email: approvedUser.email,
+				christianName: approvedUser.christian_name
+			});
+		}
+
+		return { success: true };
+	},
+
+	restrict: async ({ request, locals }) => {
+		if (!locals.profile || locals.profile.role !== 'admin') {
+			return fail(403, { message: 'Only admins can restrict users' });
+		}
+
+		const formData = await request.formData();
+		const userId = formData.get('user_id') as string;
+
+		if (!userId) return fail(400, { message: 'Missing user ID' });
+
+		if (userId === locals.user!.id) {
+			return fail(400, { message: 'Cannot restrict yourself' });
+		}
+
+		const { error } = await locals.supabase
+			.from('profiles')
+			.update({ role: 'pending' })
+			.eq('id', userId);
+
+		if (error) {
+			return fail(500, { message: 'Failed to restrict user' });
 		}
 
 		return { success: true };

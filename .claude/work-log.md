@@ -678,3 +678,25 @@ A record of everything done during development, so you can review and learn from
 ### Files created
 
 - `GUIDE.md` — SvelteKit + Supabase guide for Angular developers
+
+---
+
+## Session 5 — 2026-03-12: Fix Mention Emails + Approval Notification Email
+
+### What we did
+
+1. **Fixed mention insert RLS policy** — Mention rows were silently failing to insert because there was no INSERT policy on the `mentions` table. The code uses the user's authenticated client (not the service role key), so RLS blocked the insert. Added an INSERT policy allowing approved users to insert mentions.
+
+2. **Added approval notification email** — When an admin/member approves a pending user, they now receive a "You're in!" email with a link to the site. Follows the same fire-and-forget pattern as mention emails.
+
+3. **Wired approval email into both approve actions** — Both the homepage (`/`) and members page (`/members`) approve actions now fetch the approved user's email and send the notification.
+
+### Files created
+
+- `supabase/migrations/20260312000000_add_mentions_insert_policy.sql` — INSERT policy for mentions table
+
+### Files modified
+
+- `src/lib/email.ts` — added `sendApprovalNotification()` function
+- `src/routes/members/+page.server.ts` — import + fire-and-forget approval email after approve
+- `src/routes/+page.server.ts` — same approval email wiring
