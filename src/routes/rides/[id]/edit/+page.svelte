@@ -78,6 +78,7 @@
 				bind:nameValue={meetingSpotName}
 				bind:latValue={meetingSpotLat}
 				bind:lngValue={meetingSpotLng}
+				apiKey={data.googleMapsApiKey}
 			/>
 		</div>
 

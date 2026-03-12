@@ -169,6 +169,48 @@
 				{data.ride.meeting_spot_name}
 			{/if}
 		</p>
+		{#if data.ride.meeting_spot_lat && data.ride.meeting_spot_lng}
+			{#if data.googleMapsApiKey}
+				<a
+					href={mapsUrl(data.ride.meeting_spot_lat, data.ride.meeting_spot_lng)}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="mt-2 block"
+				>
+					<img
+						src="https://maps.googleapis.com/maps/api/staticmap?center={data.ride.meeting_spot_lat},{data.ride.meeting_spot_lng}&zoom=15&size=400x200&scale=2&markers={data.ride.meeting_spot_lat},{data.ride.meeting_spot_lng}&key={data.googleMapsApiKey}"
+						alt="Map showing {data.ride.meeting_spot_name}"
+						class="w-full rounded-lg"
+					/>
+				</a>
+			{/if}
+			<div class="mt-2 flex gap-3 text-xs">
+				<a
+					href="https://www.google.com/maps?q={data.ride.meeting_spot_lat},{data.ride.meeting_spot_lng}"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="text-gray-400 hover:text-gray-300"
+				>
+					Google Maps
+				</a>
+				<a
+					href="https://maps.apple.com/?q={data.ride.meeting_spot_lat},{data.ride.meeting_spot_lng}"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="text-gray-400 hover:text-gray-300"
+				>
+					Apple Maps
+				</a>
+				<a
+					href="https://waze.com/ul?ll={data.ride.meeting_spot_lat},{data.ride.meeting_spot_lng}"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="text-gray-400 hover:text-gray-300"
+				>
+					Waze
+				</a>
+			</div>
+		{/if}
 		{#if data.ride.ride_hares.length > 0}
 			<p>
 				Hare{data.ride.ride_hares.length > 1 ? 's' : ''}:

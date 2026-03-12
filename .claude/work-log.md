@@ -700,3 +700,43 @@ A record of everything done during development, so you can review and learn from
 - `src/lib/email.ts` — added `sendApprovalNotification()` function
 - `src/routes/members/+page.server.ts` — import + fire-and-forget approval email after approve
 - `src/routes/+page.server.ts` — same approval email wiring
+
+---
+
+## Session: 2026-03-12 — Google Maps Location Picker & Preview
+
+### What was done
+
+Re-added Google Maps integration for ride location picking with a build-safe approach. Previously removed because `$env/static/public` broke Netlify builds when the API key wasn't set.
+
+**Key concepts:**
+- Uses `$env/dynamic/public` (runtime) instead of `$env/static/public` (build-time) so the build succeeds even without the key set
+- API key is passed from layout server data → component props
+- PlacesAutocomplete gracefully degrades to a plain text input when no API key is available
+
+### Changes
+
+**`src/routes/+layout.server.ts`** — Import `PUBLIC_GOOGLE_MAPS_API_KEY` via `$env/dynamic/public` and add `googleMapsApiKey` to layout data
+
+**`src/lib/components/PlacesAutocomplete.svelte`** — Full rewrite:
+- Accepts optional `apiKey` prop
+- Dynamically loads Google Maps JS API with Places library
+- Initializes autocomplete on the text input; populates name/lat/lng on place selection
+- Shows a 150px inline map below the input with a draggable pin
+- Map is clickable to reposition the pin for fine-tuning
+- Dark-themed map styles to match the app
+- Falls back to plain text input when no API key
+
+**`src/routes/rides/new/+page.svelte`** — Pass `apiKey={data.googleMapsApiKey}` to PlacesAutocomplete
+
+**`src/routes/rides/[id]/edit/+page.svelte`** — Same API key pass-through
+
+**`src/routes/rides/[id]/+page.svelte`** — Added:
+- Static map image (Google Maps Static API, 400x200 @2x) when lat/lng exist and API key is available
+- "Open in..." links for Google Maps, Apple Maps, and Waze below the location
+
+**`@types/google.maps`** — Installed as dev dependency for TypeScript support
+
+### Not yet done
+- No changes to `.env.example` needed (already had the key listed)
+- API key must be set up in Google Cloud Console with Maps JavaScript API, Places API, and Maps Static API enabled

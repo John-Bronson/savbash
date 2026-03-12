@@ -1,3 +1,4 @@
+import { env } from '$env/dynamic/public';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
@@ -17,6 +18,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		session: locals.session,
 		user: locals.user,
 		profile: locals.profile,
-		unreadMentionCount
+		unreadMentionCount,
+		googleMapsApiKey: env.PUBLIC_GOOGLE_MAPS_API_KEY
 	};
 };
