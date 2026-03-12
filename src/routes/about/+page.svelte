@@ -8,7 +8,7 @@
 	<div class="mt-6 space-y-4 text-gray-300">
 		<p>
 			SavBash is the online home of Savannah's Hash House Harriers — a drinking club with a
-			peddling problem. We're part of a worldwide tradition that started in 1938 in Kuala Lumpur,
+			pedaling problem. We're part of a worldwide tradition that started in 1938 in Kuala Lumpur,
 			where a group of British officers would lay trails of paper through the jungle and chase each
 			other down, all for the reward of a cold beer at the end.
 		</p>
