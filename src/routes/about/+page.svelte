@@ -21,7 +21,7 @@
 		</p>
 
 		<p>
-			This site is where we coordinate our runs: post upcoming trails, RSVP, share photos, and stay
+			This site is where we coordinate our rides: post upcoming trails, RSVP, share photos, and stay
 			connected between bashes. If you'd like to join us, sign up and come out to the next run.
 			First timers are always free.
 		</p>
