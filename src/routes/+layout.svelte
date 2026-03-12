@@ -20,31 +20,34 @@
 
 <nav class="border-b border-gray-800 bg-gray-900">
 	<div class="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-		<a href="/" class="text-lg font-bold text-gray-100">SavBash</a>
+		<a href={data.session ? '/rides' : '/'} class="text-lg font-bold text-gray-100">SavBash</a>
 
 		<div class="flex items-center gap-4">
 			{#if data.session}
 				{#if data.profile && data.profile.role !== 'pending'}
+					<a href="/rides" class="text-sm text-gray-400 hover:text-gray-200">Rides</a>
 					<a href="/members" class="text-sm text-gray-400 hover:text-gray-200">Members</a>
 				{/if}
+				<a href="/about" class="text-sm text-gray-400 hover:text-gray-200">About</a>
+				<a href="/profile" class="flex items-center gap-2 hover:opacity-80">
+					<Avatar profile={data.profile} size="sm" />
+					<span class="hidden text-sm text-gray-400 sm:inline"></span>
+				</a>
+				{#if data.unreadMentionCount > 0}
 				<a href="/notifications" class="relative text-gray-400 hover:text-gray-200">
 					<span class="text-lg">🔔</span>
-					{#if data.unreadMentionCount > 0}
 						<span
 							class="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white"
 						>
 							{data.unreadMentionCount}
 						</span>
+				</a>
 					{/if}
-				</a>
-				<a href="/profile" class="flex items-center gap-2 hover:opacity-80">
-					<Avatar profile={data.profile} size="sm" />
-					<span class="hidden text-sm text-gray-400 sm:inline">{displayName}</span>
-				</a>
-				<button onclick={signOut} class="text-sm text-gray-400 hover:text-gray-200">
+				<button onclick={signOut} class="cursor-pointer text-sm text-gray-400 hover:text-gray-200">
 					Sign Out
 				</button>
 			{:else}
+				<a href="/about" class="text-sm text-gray-400 hover:text-gray-200">About</a>
 				<a href="/login" class="text-sm text-gray-400 hover:text-gray-200"> Sign In </a>
 			{/if}
 		</div>

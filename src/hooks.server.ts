@@ -53,8 +53,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
 
 	// Routes that don't require auth
-	const publicPaths = ['/login', '/auth/callback'];
-	const isPublicPath = publicPaths.some((p) => path.startsWith(p));
+	const publicPaths = ['/login', '/auth/callback', '/about'];
+	const isPublicPath = path === '/' || publicPaths.some((p) => path.startsWith(p));
 
 	// Not logged in — redirect to login (unless already on a public path)
 	if (!user && !isPublicPath) {
@@ -80,6 +80,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 		path !== '/pending' &&
 		path !== '/profile/setup' &&
 		path !== '/profile' &&
+		path !== '/' &&
+		path !== '/about' &&
 		!isPublicPath
 	) {
 		redirect(303, '/pending');

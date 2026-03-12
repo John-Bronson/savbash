@@ -740,3 +740,48 @@ Re-added Google Maps integration for ride location picking with a build-safe app
 ### Not yet done
 - No changes to `.env.example` needed (already had the key listed)
 - API key must be set up in Google Cloud Console with Maps JavaScript API, Places API, and Maps Static API enabled
+
+---
+
+## Session 8 — 2026-03-12: Public Splash Page + About Page
+
+### What we did
+
+1. **Moved rides list from `/` to `/rides`**
+   - Created `src/routes/rides/+page.svelte` and `src/routes/rides/+page.server.ts` with the existing rides list, pending approvals, and approve action
+   - Deleted `src/routes/+page.server.ts`
+
+2. **Created public splash page at `/`**
+   - Rewrote `src/routes/+page.svelte` with hero section, SavBash branding, description, and CTA buttons
+   - Logged-out users see "Sign In" + "Learn More" buttons
+   - Logged-in users see "Go to Rides" button instead
+
+3. **Created `/about` page**
+   - New `src/routes/about/+page.svelte` with Hash House Harriers description and sign-up CTA
+
+4. **Updated route protection in `src/hooks.server.ts`**
+   - Added `/` (exact match) and `/about` to public paths
+   - Added both to pending-user allowed paths
+
+5. **Updated post-login redirects to `/rides`**
+   - `src/routes/auth/callback/+server.ts` — redirect to `/rides`
+   - `src/routes/login/+page.svelte` — `goto('/rides')` after OTP verification
+
+6. **Updated navbar in `src/routes/+layout.svelte`**
+   - SavBash logo links to `/rides` for logged-in users, `/` for guests
+   - Added "About" link for logged-out users
+
+### Files created
+- `src/routes/rides/+page.svelte`
+- `src/routes/rides/+page.server.ts`
+- `src/routes/about/+page.svelte`
+
+### Files modified
+- `src/routes/+page.svelte` (rewritten as splash page)
+- `src/hooks.server.ts`
+- `src/routes/+layout.svelte`
+- `src/routes/auth/callback/+server.ts`
+- `src/routes/login/+page.svelte`
+
+### Files deleted
+- `src/routes/+page.server.ts`

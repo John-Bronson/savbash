@@ -47,7 +47,7 @@
 		if (authError) {
 			otpError = authError.message;
 		} else {
-			goto('/', { invalidateAll: true });
+			goto('/rides', { invalidateAll: true });
 		}
 	}
 
