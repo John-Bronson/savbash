@@ -151,6 +151,7 @@ export type Database = {
 					id: string;
 					notify_on_mention: boolean;
 					role: string;
+					signup_notified: boolean;
 					subscribed_to_emails: boolean;
 				};
 				Insert: {
@@ -163,6 +164,7 @@ export type Database = {
 					id: string;
 					notify_on_mention?: boolean;
 					role?: string;
+					signup_notified?: boolean;
 					subscribed_to_emails?: boolean;
 				};
 				Update: {
@@ -175,6 +177,7 @@ export type Database = {
 					id?: string;
 					notify_on_mention?: boolean;
 					role?: string;
+					signup_notified?: boolean;
 					subscribed_to_emails?: boolean;
 				};
 				Relationships: [];
@@ -299,7 +302,36 @@ export type Database = {
 					}
 				];
 			};
-			rides: {
+			site_settings: {
+			Row: {
+				key: string;
+				value: Json;
+				updated_at: string;
+				updated_by: string | null;
+			};
+			Insert: {
+				key: string;
+				value?: Json;
+				updated_at?: string;
+				updated_by?: string | null;
+			};
+			Update: {
+				key?: string;
+				value?: Json;
+				updated_at?: string;
+				updated_by?: string | null;
+			};
+			Relationships: [
+				{
+					foreignKeyName: 'site_settings_updated_by_fkey';
+					columns: ['updated_by'];
+					isOneToOne: false;
+					referencedRelation: 'profiles';
+					referencedColumns: ['id'];
+				}
+			];
+		};
+		rides: {
 				Row: {
 					created_at: string;
 					created_by: string;

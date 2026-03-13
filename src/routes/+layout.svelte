@@ -27,6 +27,9 @@
 				{#if data.profile && data.profile.role !== 'pending'}
 					<a href="/rides" class="text-sm text-gray-400 hover:text-gray-200">Rides</a>
 					<a href="/members" class="text-sm text-gray-400 hover:text-gray-200">Members</a>
+					{#if data.profile?.role === 'admin'}
+						<a href="/admin" class="text-sm text-gray-400 hover:text-gray-200">Admin</a>
+					{/if}
 				{/if}
 				<a href="/about" class="text-sm text-gray-400 hover:text-gray-200">About</a>
 				<a href="/profile" class="flex items-center gap-2 hover:opacity-80">

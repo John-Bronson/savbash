@@ -165,6 +165,37 @@ Hey ${escapeHtml(data.christianName)}, your SavBash account has been approved. Y
 	}
 }
 
+export async function sendSignupNotification(email: string, notifyEmails: string[]) {
+	if (!env.RESEND_API_KEY || notifyEmails.length === 0) return;
+
+	const membersUrl = `${PUBLIC_SITE_URL}/members`;
+
+	const html = emailWrapper(`
+<h2 style="margin:0 0 16px;color:#f3f4f6;font-size:20px">New Signup Pending Approval</h2>
+<p style="margin:0 0 16px;color:#d1d5db;font-size:15px">
+A new user has signed up and is waiting for approval:
+</p>
+<p style="margin:0 0 16px;color:#f3f4f6;font-size:16px;font-weight:600">
+${escapeHtml(email)}
+</p>
+<div style="text-align:center;margin-top:24px">
+<a href="${membersUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px">Review Members</a>
+</div>
+`);
+
+	try {
+		await getResend().emails.send({
+			from: FROM,
+			to: FROM,
+			bcc: notifyEmails,
+			subject: `New signup pending approval: ${email}`,
+			html
+		});
+	} catch (err) {
+		console.error('Failed to send signup notification:', err);
+	}
+}
+
 function escapeHtml(str: string): string {
 	return str
 		.replace(/&/g, '&amp;')

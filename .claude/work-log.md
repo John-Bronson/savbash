@@ -785,3 +785,32 @@ Re-added Google Maps integration for ride location picking with a build-safe app
 
 ### Files deleted
 - `src/routes/+page.server.ts`
+
+---
+
+## Session 11 — 2026-03-13: Admin Page & Signup Notification Emails
+
+### What we did
+
+1. **Created `site_settings` table** — Key-value store for admin-configurable settings with RLS (authenticated read, admin-only write). Seeded with empty `signup_notification_emails` list.
+
+2. **Added `signup_notified` flag to profiles** — Boolean column preventing duplicate notification emails when users click magic links multiple times.
+
+3. **Added `sendSignupNotification` email function** — BCC-based notification to configured admins when a new user signs up, linking to the /members page for approval.
+
+4. **Updated auth callback** — After `exchangeCodeForSession`, checks if the user is new (empty `christian_name` + `signup_notified = false`), fetches notification emails from `site_settings`, fires off the notification, and sets the flag.
+
+5. **Created admin page** (`/admin`) — Admin-only page with a textarea for managing signup notification email addresses. Uses SvelteKit form actions with email validation and success/error feedback.
+
+6. **Added Admin nav link** — Visible only to users with `role === 'admin'`, positioned between Members and About.
+
+### Files created
+- `supabase/migrations/20260313000000_add_site_settings.sql`
+- `src/routes/admin/+page.server.ts`
+- `src/routes/admin/+page.svelte`
+
+### Files modified
+- `src/lib/database.types.ts` (added `site_settings` table type + `signup_notified` to profiles)
+- `src/lib/email.ts` (added `sendSignupNotification`)
+- `src/routes/auth/callback/+server.ts` (trigger notification on first signup)
+- `src/routes/+layout.svelte` (admin nav link)
