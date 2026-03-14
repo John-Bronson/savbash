@@ -53,7 +53,11 @@ interface RideEmailData {
 }
 
 export async function sendRideAnnouncement(ride: RideEmailData, subscribers: { email: string }[]) {
-	if (!env.RESEND_API_KEY || subscribers.length === 0) return;
+	if (!env.RESEND_API_KEY) {
+		console.warn('RESEND_API_KEY not configured — skipping email');
+		return;
+	}
+	if (subscribers.length === 0) return;
 
 	const rideUrl = `${PUBLIC_SITE_URL}/rides/${ride.id}`;
 	const hareText = ride.hares.length > 0 ? ride.hares.join(', ') : 'TBD';
@@ -103,7 +107,10 @@ interface MentionEmailData {
 }
 
 export async function sendMentionNotification(data: MentionEmailData) {
-	if (!env.RESEND_API_KEY) return;
+	if (!env.RESEND_API_KEY) {
+		console.warn('RESEND_API_KEY not configured — skipping email');
+		return;
+	}
 
 	const commentUrl = `${PUBLIC_SITE_URL}/rides/${data.rideId}#comment-${data.commentId}`;
 	const preview = data.commentBody.slice(0, 200);
@@ -141,7 +148,10 @@ interface ApprovalEmailData {
 }
 
 export async function sendApprovalNotification(data: ApprovalEmailData) {
-	if (!env.RESEND_API_KEY) return;
+	if (!env.RESEND_API_KEY) {
+		console.warn('RESEND_API_KEY not configured — skipping email');
+		return;
+	}
 
 	const html = emailWrapper(`
 <h2 style="margin:0 0 16px;color:#f3f4f6;font-size:20px">You're in! 🎉</h2>
@@ -166,7 +176,11 @@ Hey ${escapeHtml(data.christianName)}, your SavBash account has been approved. Y
 }
 
 export async function sendSignupNotification(email: string, notifyEmails: string[]) {
-	if (!env.RESEND_API_KEY || notifyEmails.length === 0) return;
+	if (!env.RESEND_API_KEY) {
+		console.warn('RESEND_API_KEY not configured — skipping email');
+		return;
+	}
+	if (notifyEmails.length === 0) return;
 
 	const membersUrl = `${PUBLIC_SITE_URL}/members`;
 
