@@ -51,10 +51,13 @@ export const actions: Actions = {
 			.single();
 
 		if (approvedUser?.email) {
-			sendApprovalNotification({
+			console.log('Sending approval email to:', approvedUser.email);
+			await sendApprovalNotification({
 				email: approvedUser.email,
 				christianName: approvedUser.christian_name
 			});
+		} else {
+			console.warn('No email found for approved user:', userId);
 		}
 
 		return { success: true };

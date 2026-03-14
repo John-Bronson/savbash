@@ -85,13 +85,14 @@ ${descPreview ? `<p style="margin:16px 0 0;color:#d1d5db;font-size:14px">${escap
 
 	// Resend batch API: send to all at once using BCC
 	try {
-		await getResend().emails.send({
+		const result = await getResend().emails.send({
 			from: FROM,
 			to: FROM,
 			bcc: emails,
 			subject: `New Ride: ${ride.title}`,
 			html
 		});
+		console.log('Ride announcement sent:', result);
 	} catch (err) {
 		console.error('Failed to send ride announcement:', err);
 	}
@@ -131,12 +132,13 @@ In <strong style="color:#d1d5db">${escapeHtml(data.rideTitle)}</strong>
 `);
 
 	try {
-		await getResend().emails.send({
+		const result = await getResend().emails.send({
 			from: FROM,
 			to: data.mentionedEmail,
 			subject: `${data.mentionerName} mentioned you in ${data.rideTitle}`,
 			html
 		});
+		console.log('Mention notification sent:', result);
 	} catch (err) {
 		console.error('Failed to send mention notification:', err);
 	}
@@ -164,12 +166,13 @@ Hey ${escapeHtml(data.christianName)}, your SavBash account has been approved. Y
 `);
 
 	try {
-		await getResend().emails.send({
+		const result = await getResend().emails.send({
 			from: FROM,
 			to: data.email,
 			subject: "You've been approved — welcome to SavBash!",
 			html
 		});
+		console.log('Approval notification sent:', result);
 	} catch (err) {
 		console.error('Failed to send approval notification:', err);
 	}
@@ -198,13 +201,14 @@ ${escapeHtml(email)}
 `);
 
 	try {
-		await getResend().emails.send({
+		const result = await getResend().emails.send({
 			from: FROM,
 			to: FROM,
 			bcc: notifyEmails,
 			subject: `New signup pending approval: ${email}`,
 			html
 		});
+		console.log('Signup notification sent:', result);
 	} catch (err) {
 		console.error('Failed to send signup notification:', err);
 	}

@@ -194,9 +194,11 @@ export const actions: Actions = {
 					.in('id', mentionedIds);
 
 				if (mentionedProfiles && ride) {
+					console.log('Processing mentions:', mentionedProfiles.map((p) => ({ id: p.id, notify: p.notify_on_mention, hasEmail: !!p.email })));
 					for (const mp of mentionedProfiles) {
 						if (mp.notify_on_mention && mp.email) {
-							sendMentionNotification({
+							console.log('Sending mention email to:', mp.email);
+							await sendMentionNotification({
 								mentionedEmail: mp.email,
 								mentionerName: commenterName,
 								commentBody: body,
@@ -206,6 +208,8 @@ export const actions: Actions = {
 							});
 						}
 					}
+				} else {
+					console.warn('No mentioned profiles or ride found:', { mentionedProfiles, ride });
 				}
 			}
 		}
