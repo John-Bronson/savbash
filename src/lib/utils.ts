@@ -10,7 +10,7 @@ export function timeAgo(dateStr: string): string {
 }
 
 export function highlightMentions(body: string, currentUserNames: string[]): string {
-	return body.replace(/@(\w[\w\s]*?)(?=\s@|$|\s(?![\w])|\.|,|!|\?)/g, (match, name) => {
+	return body.replace(/@(\w[\w\s]*?)(?=\u00A0|\s@|$|\s(?![\w])|\.|,|!|\?)/g, (match, name) => {
 		const isCurrentUser = currentUserNames.some((n) => n.toLowerCase() === name.toLowerCase());
 		if (isCurrentUser) {
 			return `<span class="rounded bg-blue-600/30 px-1 font-medium text-blue-300">${match}</span>`;

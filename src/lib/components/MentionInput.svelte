@@ -17,7 +17,9 @@
 
 	const MENTION_RE = /@(\w[\w\s]*?)(?=\s@|$|\s(?![\w])|\.|,|!|\?)/g;
 
-	type Segment = { type: 'text'; content: string } | { type: 'mention'; mentionName: string };
+	type Segment =
+		| { type: 'text'; content: string }
+		| { type: 'mention'; mentionName: string; mentionId: string };
 
 	function parseSegments(text: string): Segment[] {
 		const segments: Segment[] = [];
@@ -27,7 +29,7 @@
 			if (idx > lastIndex) {
 				segments.push({ type: 'text', content: text.slice(lastIndex, idx) });
 			}
-			segments.push({ type: 'mention', mentionName: match[1] });
+			segments.push({ type: 'mention', mentionName: match[1], mentionId: '' });
 			lastIndex = idx + match[0].length;
 		}
 		if (lastIndex < text.length) {
@@ -47,6 +49,7 @@
 	let selectedIndex = $state(0);
 	let composing = $state(false);
 	let plainValue = $state(value);
+	let mentionIdsForForm = $state('[]');
 
 	const filtered = $derived(() => {
 		if (!mentionQuery)
@@ -76,11 +79,12 @@
 		return results.slice(0, 8);
 	});
 
-	function createMentionSpan(mentionName: string): HTMLSpanElement {
+	function createMentionSpan(mentionName: string, mentionId: string): HTMLSpanElement {
 		const span = document.createElement('span');
 		span.contentEditable = 'false';
 		span.setAttribute('data-mention', '');
 		span.setAttribute('data-mention-name', mentionName);
+		span.setAttribute('data-mention-id', mentionId);
 		span.className = 'rounded bg-blue-600/30 px-1 font-medium text-blue-300';
 		span.textContent = `@${mentionName}`;
 		return span;
@@ -99,7 +103,7 @@
 					if (parts[i]) editor.appendChild(document.createTextNode(parts[i]));
 				}
 			} else {
-				editor.appendChild(createMentionSpan(seg.mentionName));
+				editor.appendChild(createMentionSpan(seg.mentionName, seg.mentionId));
 			}
 		}
 		// Ensure there's at least an empty text node so cursor can be placed
@@ -119,7 +123,8 @@
 				const el = node as HTMLElement;
 				if (el.hasAttribute('data-mention')) {
 					const mentionName = el.getAttribute('data-mention-name') || '';
-					segments.push({ type: 'mention', mentionName });
+					const mentionId = el.getAttribute('data-mention-id') || '';
+					segments.push({ type: 'mention', mentionName, mentionId });
 				} else if (el.tagName === 'BR') {
 					segments.push({ type: 'text', content: '\n' });
 				} else {
@@ -178,6 +183,9 @@
 		const segments = readFromDOM();
 		plainValue = serializeSegments(segments);
 		value = plainValue;
+		mentionIdsForForm = JSON.stringify(
+			segments.filter((s) => s.type === 'mention').map((s) => s.mentionId)
+		);
 
 		// Clean up empty state for placeholder
 		if (!plainValue && editor.innerHTML !== '') {
@@ -285,7 +293,7 @@
 			} else if (e.key === 'Enter' || e.key === 'Tab') {
 				if (items.length > 0) {
 					e.preventDefault();
-					insertMention(items[selectedIndex].display);
+					insertMention(items[selectedIndex].display, items[selectedIndex].id);
 					return;
 				}
 			} else if (e.key === 'Escape') {
@@ -319,7 +327,7 @@
 		}
 	}
 
-	function insertMention(display: string) {
+	function insertMention(display: string, id: string) {
 		// We need to find and replace the @query text with a mention span
 		const textBefore = getTextBeforeCursor();
 		if (textBefore === null) return;
@@ -343,7 +351,7 @@
 				const before = text.slice(0, atPos);
 				const after = text.slice(offset);
 
-				const mentionSpan = createMentionSpan(display);
+				const mentionSpan = createMentionSpan(display, id);
 				const afterNode = document.createTextNode(after ? ` ${after}` : '\u00A0');
 				const parentNode = container.parentNode!;
 
@@ -382,6 +390,7 @@
 		const plain = untrack(() => plainValue); // NOT tracked
 		if (current !== plain) {
 			plainValue = current;
+			if (!current) mentionIdsForForm = '[]';
 			tick().then(() => renderToDOM());
 		}
 	});
@@ -394,6 +403,7 @@
 
 <div class="relative">
 	<input type="hidden" {name} value={plainValue} />
+	<input type="hidden" name="mention_ids" value={mentionIdsForForm} />
 	<div
 		bind:this={editor}
 		contenteditable="true"
@@ -428,7 +438,7 @@
 					type="button"
 					onmousedown={(e) => {
 						e.preventDefault();
-						insertMention(item.display);
+						insertMention(item.display, item.id);
 					}}
 					class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition {i ===
 					selectedIndex

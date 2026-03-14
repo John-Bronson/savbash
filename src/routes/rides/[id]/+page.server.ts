@@ -118,52 +118,53 @@ export const actions: Actions = {
 
 		if (commentError || !comment) return fail(500, { message: 'Failed to post comment' });
 
-		// Parse mentions from comment body
-		const mentionRegex = /@([\w][\w\s]*?)(?=\s@|$|\s(?![\w])|\.|,|!|\?)/g;
-		const mentionNames: string[] = [];
-		let match;
-		while ((match = mentionRegex.exec(body)) !== null) {
-			mentionNames.push(match[1].trim());
+		// Read mention IDs passed from client (MentionInput hidden field)
+		const mentionIdsRaw = formData.get('mention_ids') as string;
+		let mentionIds: string[] = [];
+		try {
+			const parsed = JSON.parse(mentionIdsRaw || '[]');
+			if (Array.isArray(parsed)) {
+				mentionIds = parsed.filter((id): id is string => typeof id === 'string' && id.length > 0);
+			}
+		} catch {
+			console.warn('Failed to parse mention_ids:', mentionIdsRaw);
 		}
+		console.log('Mention IDs from form:', mentionIds);
 
-		if (mentionNames.length > 0) {
+		if (mentionIds.length > 0) {
 			const mentionRows: { comment_id: string; mentioned_user_id: string; ride_id: string }[] = [];
+			const hasEveryone = mentionIds.includes('everyone');
+			const userIds = mentionIds.filter((id) => id !== 'everyone');
 
-			for (const name of mentionNames) {
-				if (name.toLowerCase() === 'everyone') {
-					// Expand @everyone to all RSVPed users
-					const { data: rsvpUsers } = await locals.supabase
-						.from('rsvps')
-						.select('user_id')
-						.eq('ride_id', params.id)
-						.in('status', ['going', 'maybe']);
+			// Handle @everyone — expand to all RSVPed users
+			if (hasEveryone) {
+				const { data: rsvpUsers } = await locals.supabase
+					.from('rsvps')
+					.select('user_id')
+					.eq('ride_id', params.id)
+					.in('status', ['going', 'maybe']);
 
-					if (rsvpUsers) {
-						for (const rsvp of rsvpUsers) {
-							if (rsvp.user_id !== locals.user.id) {
-								mentionRows.push({
-									comment_id: comment.id,
-									mentioned_user_id: rsvp.user_id,
-									ride_id: params.id
-								});
-							}
+				if (rsvpUsers) {
+					for (const rsvp of rsvpUsers) {
+						if (rsvp.user_id !== locals.user.id) {
+							mentionRows.push({
+								comment_id: comment.id,
+								mentioned_user_id: rsvp.user_id,
+								ride_id: params.id
+							});
 						}
 					}
-				} else {
-					// Look up by bash_name first, then christian_name
-					const { data: profile } = await locals.supabase
-						.from('profiles')
-						.select('id')
-						.or(`bash_name.ilike.${name},christian_name.ilike.${name}`)
-						.single();
+				}
+			}
 
-					if (profile && profile.id !== locals.user.id) {
-						mentionRows.push({
-							comment_id: comment.id,
-							mentioned_user_id: profile.id,
-							ride_id: params.id
-						});
-					}
+			// Handle individual user mentions — IDs are already known
+			for (const uid of userIds) {
+				if (uid !== locals.user.id) {
+					mentionRows.push({
+						comment_id: comment.id,
+						mentioned_user_id: uid,
+						ride_id: params.id
+					});
 				}
 			}
 
