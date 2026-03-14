@@ -864,3 +864,25 @@ Replaced the plain `<textarea>` in `MentionInput.svelte` with a `contenteditable
 ### Files modified
 
 - `src/lib/components/MentionInput.svelte` — fixed reactive effect bugs
+
+---
+
+## Session 14 — 2026-03-14: Add "Disable" User Action
+
+### What we did
+
+1. **Added `disable` server action** — Admins can set a user's role to `disabled`, which locks them out like `pending` but keeps all their content (rides, comments, photos) intact.
+
+2. **Updated hooks for disabled users** — `hooks.server.ts` now redirects `disabled` users to `/pending` the same way it handles `pending` users.
+
+3. **Added Disable button to members UI** — Two-step confirmation (Disable → Confirm/Cancel), same pattern as Restrict. Only visible to admins, not on self.
+
+4. **Added collapsible "Disabled Accounts" section** — At the bottom of the members page, a triangle toggle (`▶`/`▼`) reveals disabled users with avatar, name, email, and a Restore button.
+
+5. **Restore sends users back to pending** — The Restore button uses the existing `changeRole` action with `new_role=pending`. Added `'pending'` to the valid roles list in `changeRole` to support this.
+
+### Files modified
+
+- `src/hooks.server.ts` — block disabled users same as pending
+- `src/routes/members/+page.server.ts` — added `disable` action, added `'pending'` to `changeRole` valid roles
+- `src/routes/members/+page.svelte` — Disable button, disabled badge style, collapsible disabled section with Restore

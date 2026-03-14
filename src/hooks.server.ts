@@ -76,7 +76,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		user &&
 		event.locals.profile &&
 		event.locals.profile.christian_name &&
-		event.locals.profile.role === 'pending' &&
+		(event.locals.profile.role === 'pending' || event.locals.profile.role === 'disabled') &&
 		path !== '/pending' &&
 		path !== '/profile/setup' &&
 		path !== '/profile' &&

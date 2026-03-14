@@ -21,7 +21,19 @@
 		data.members.filter(
 			(m) =>
 				m.role !== 'pending' &&
+				m.role !== 'disabled' &&
 				(m.christian_name?.toLowerCase().includes(search.toLowerCase()) ||
+					m.bash_name?.toLowerCase().includes(search.toLowerCase()) ||
+					m.email?.toLowerCase().includes(search.toLowerCase()))
+		)
+	);
+
+	const disabledMembers = $derived(
+		data.members.filter(
+			(m) =>
+				m.role === 'disabled' &&
+				(!search ||
+					m.christian_name?.toLowerCase().includes(search.toLowerCase()) ||
 					m.bash_name?.toLowerCase().includes(search.toLowerCase()) ||
 					m.email?.toLowerCase().includes(search.toLowerCase()))
 		)
@@ -31,10 +43,13 @@
 		admin: 'bg-purple-900 text-purple-300',
 		moderator: 'bg-blue-900 text-blue-300',
 		user: 'bg-gray-800 text-gray-400',
-		pending: 'bg-yellow-900 text-yellow-300'
+		pending: 'bg-yellow-900 text-yellow-300',
+		disabled: 'bg-gray-800 text-gray-500'
 	};
 
 	let confirmingRestrict = $state<string | null>(null);
+	let confirmingDisable = $state<string | null>(null);
+	let showDisabled = $state(false);
 
 	function displayName(member: { christian_name: string; bash_name: string | null }) {
 		return member.bash_name || member.christian_name;
@@ -165,12 +180,90 @@
 							Restrict
 						</button>
 					{/if}
+					{#if confirmingDisable === member.id}
+						<form method="POST" action="?/disable" use:enhance={() => {
+							return async ({ update }) => {
+								confirmingDisable = null;
+								await update();
+							};
+						}}>
+							<input type="hidden" name="user_id" value={member.id} />
+							<div class="flex gap-1">
+								<button
+									type="submit"
+									class="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
+								>
+									Confirm
+								</button>
+								<button
+									type="button"
+									onclick={() => (confirmingDisable = null)}
+									class="rounded bg-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-gray-600"
+								>
+									Cancel
+								</button>
+							</div>
+						</form>
+					{:else}
+						<button
+							type="button"
+							onclick={() => (confirmingDisable = member.id)}
+							class="rounded bg-gray-700 px-2 py-1 text-xs text-gray-400 hover:bg-gray-600"
+						>
+							Disable
+						</button>
+					{/if}
 				{/if}
 			</div>
 		</div>
 	{/each}
 </div>
 
-{#if activeMembers.length === 0 && pendingMembers.length === 0}
+{#if activeMembers.length === 0 && pendingMembers.length === 0 && disabledMembers.length === 0}
 	<p class="text-center text-gray-500">No members found.</p>
+{/if}
+
+{#if data.isAdmin && disabledMembers.length > 0}
+	<div class="mt-8">
+		<button
+			type="button"
+			onclick={() => (showDisabled = !showDisabled)}
+			class="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300"
+		>
+			<span class="text-xs">{showDisabled ? '▼' : '▶'}</span>
+			Disabled Accounts ({disabledMembers.length})
+		</button>
+		{#if showDisabled}
+			<div class="mt-3 space-y-2">
+				{#each disabledMembers as member}
+					<div
+						class="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-900/50 px-4 py-3"
+					>
+						<div class="flex items-center gap-3">
+							<Avatar profile={member} size="sm" />
+							<div>
+								<span class="font-medium text-gray-400">{displayName(member)}</span>
+								{#if member.bash_name && member.christian_name}
+									<span class="ml-2 text-sm text-gray-600">{member.christian_name}</span>
+								{/if}
+								{#if member.email}
+									<span class="ml-2 text-sm text-gray-600">{member.email}</span>
+								{/if}
+							</div>
+						</div>
+						<form method="POST" action="?/changeRole" use:enhance>
+							<input type="hidden" name="user_id" value={member.id} />
+							<input type="hidden" name="new_role" value="pending" />
+							<button
+								type="submit"
+								class="rounded bg-yellow-900 px-3 py-1 text-sm text-yellow-300 hover:bg-yellow-800"
+							>
+								Restore
+							</button>
+						</form>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
 {/if}

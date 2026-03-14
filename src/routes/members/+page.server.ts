@@ -99,7 +99,7 @@ export const actions: Actions = {
 		const newRole = formData.get('new_role') as string;
 
 		if (!userId) return fail(400, { message: 'Missing user ID' });
-		if (!['user', 'moderator', 'admin'].includes(newRole)) {
+		if (!['user', 'moderator', 'admin', 'pending'].includes(newRole)) {
 			return fail(400, { message: 'Invalid role' });
 		}
 
@@ -114,6 +114,32 @@ export const actions: Actions = {
 
 		if (error) {
 			return fail(500, { message: 'Failed to change role' });
+		}
+
+		return { success: true };
+	},
+
+	disable: async ({ request, locals }) => {
+		if (!locals.profile || locals.profile.role !== 'admin') {
+			return fail(403, { message: 'Only admins can disable users' });
+		}
+
+		const formData = await request.formData();
+		const userId = formData.get('user_id') as string;
+
+		if (!userId) return fail(400, { message: 'Missing user ID' });
+
+		if (userId === locals.user!.id) {
+			return fail(400, { message: 'Cannot disable yourself' });
+		}
+
+		const { error } = await locals.supabase
+			.from('profiles')
+			.update({ role: 'disabled' })
+			.eq('id', userId);
+
+		if (error) {
+			return fail(500, { message: 'Failed to disable user' });
 		}
 
 		return { success: true };
