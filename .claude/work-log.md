@@ -814,3 +814,30 @@ Re-added Google Maps integration for ride location picking with a build-safe app
 - `src/lib/email.ts` (added `sendSignupNotification`)
 - `src/routes/auth/callback/+server.ts` (trigger notification on first signup)
 - `src/routes/+layout.svelte` (admin nav link)
+
+---
+
+## Session: 2026-03-13 — Mention Chips in Comment Input
+
+### What we did
+
+Replaced the plain `<textarea>` in `MentionInput.svelte` with a `contenteditable` div that renders @mentions as visual chips. Key changes:
+
+1. **Contenteditable div** replaces the textarea — a hidden `<input>` holds the serialized plain text value for form submission, maintaining the same interface
+2. **Mention chips** — when a mention is selected from the dropdown, it's inserted as a `<span contenteditable="false" data-mention>` element styled with `rounded bg-blue-600/30 px-1 font-medium text-blue-300`
+3. **Atomic deletion** — backspace next to a mention chip deletes the entire chip in one keystroke (same for Delete key going forward)
+4. **DOM ↔ data sync** — `readFromDOM()` walks the contenteditable's child nodes to extract segments, `renderToDOM()` rebuilds the DOM from segments (used on mount and external value changes, not during typing)
+5. **Paste handling** — intercepts paste events to insert plain text only
+6. **IME composition** — suppresses mention detection during IME input
+7. **CSS placeholder** — uses `[data-placeholder]:empty::before` pseudo-element for placeholder text
+8. **External value sync** — `$effect` detects when the bound `value` prop changes externally (e.g., form reset) and re-renders the DOM
+
+### Key concepts
+
+- **Segment model** — internal `Segment` type with `{ type: 'text', content }` and `{ type: 'mention', mentionName }` segments, parsed/serialized using the same mention regex as `highlightMentions` in utils.ts
+- **Non-editable spans** — `contenteditable="false"` on mention spans makes them behave as atomic units that can't be partially edited
+- **Cursor management** — uses `window.getSelection()` and DOM Range API for mention detection and insertion positioning
+
+### Files modified
+
+- `src/lib/components/MentionInput.svelte` — rewritten (textarea → contenteditable with mention chips)
