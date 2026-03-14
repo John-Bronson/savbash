@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { tick, onMount, untrack } from 'svelte';
 
 	let {
 		value = $bindable(''),
@@ -377,25 +377,18 @@
 	}
 
 	// Sync external value changes (e.g., form reset clearing commentBody)
-	let lastExternalValue = value;
 	$effect(() => {
-		const current = value;
-		if (current !== plainValue) {
+		const current = value; // tracked
+		const plain = untrack(() => plainValue); // NOT tracked
+		if (current !== plain) {
 			plainValue = current;
-			lastExternalValue = current;
-			tick().then(() => {
-				renderToDOM();
-			});
+			tick().then(() => renderToDOM());
 		}
 	});
 
-	// Initial render
-	$effect(() => {
-		if (editor) {
-			renderToDOM();
-			// Only run once on mount
-			return;
-		}
+	// Initial render — runs exactly once, no reactive tracking
+	onMount(() => {
+		renderToDOM();
 	});
 </script>
 

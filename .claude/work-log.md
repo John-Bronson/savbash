@@ -841,3 +841,26 @@ Replaced the plain `<textarea>` in `MentionInput.svelte` with a `contenteditable
 ### Files modified
 
 - `src/lib/components/MentionInput.svelte` — rewritten (textarea → contenteditable with mention chips)
+
+---
+
+## Session 12 — 2026-03-13: Fix MentionInput Contenteditable Bugs
+
+### What we did
+
+1. **Fixed cursor-jump-after-@ and dropdown-click-fails bugs** — Both caused by `$effect` reactive tracking calling `renderToDOM()` on every keystroke, destroying/rebuilding DOM and wiping cursor position.
+
+2. **Three changes in `MentionInput.svelte`:**
+   - Replaced initial render `$effect` with `onMount(() => renderToDOM())` — runs once, no reactive tracking
+   - Fixed external sync `$effect` to use `untrack(() => plainValue)` so it only fires when the external `value` prop changes, not on internal typing
+   - Removed unused `lastExternalValue` variable
+
+### Key concepts
+
+- Svelte 5 `$effect` tracks any reactive state read inside it as a dependency — reading `plainValue` inside `renderToDOM()` caused the effect to re-run on every keystroke
+- `untrack()` lets you read reactive state without creating a dependency
+- `onMount` is the correct tool for one-time initialization that shouldn't re-run
+
+### Files modified
+
+- `src/lib/components/MentionInput.svelte` — fixed reactive effect bugs
