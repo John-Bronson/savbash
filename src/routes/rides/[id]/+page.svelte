@@ -16,6 +16,10 @@
 	let submittingComment = $state(false);
 	let showReactionPicker = $state<string | null>(null);
 	let confirmingDeleteComment = $state<string | null>(null);
+	let replyingTo = $state<string | null>(null);
+	let replyBody = $state('');
+	let submittingReply = $state(false);
+	let expandedThreads = $state<Set<string>>(new Set());
 	let photoUrl = $state<string | null>(null);
 	let photoCaption = $state('');
 	let submittingPhoto = $state(false);
@@ -64,6 +68,21 @@
 	const maybeRsvps = $derived(
 		data.ride.rsvps.filter((r: { status: string }) => r.status === 'maybe')
 	);
+
+	const topLevelComments = $derived(
+		data.comments.filter((c: { parent_id: string | null }) => !c.parent_id)
+	);
+	const repliesByParent = $derived(() => {
+		const map = new Map<string, typeof data.comments>();
+		for (const c of data.comments) {
+			if (c.parent_id) {
+				const arr = map.get(c.parent_id);
+				if (arr) arr.push(c);
+				else map.set(c.parent_id, [c]);
+			}
+		}
+		return map;
+	});
 
 	const renderedDescription = $derived(
 		data.ride.description ? marked.parse(data.ride.description) : ''
@@ -438,124 +457,217 @@
 			<p class="text-sm text-gray-500">No comments yet. Be the first!</p>
 		{/if}
 
-		<div class="space-y-4">
-			{#each data.comments as comment}
-				<div
-					id="comment-{comment.id}"
-					class="rounded-lg border border-gray-800 p-3 transition-colors duration-1000 {highlightedCommentId ===
-					comment.id
-						? 'border-blue-500 bg-blue-900/20'
-						: 'bg-gray-900'}"
-				>
-					{#if comment.is_deleted}
-						<p class="text-sm text-gray-600 italic">This comment was deleted.</p>
-					{:else}
-						<div class="flex items-start gap-3">
-							<Avatar profile={comment.author} size="sm" />
-							<div class="min-w-0 flex-1">
-								<div class="flex items-center gap-2">
-									<span class="text-sm font-medium text-gray-200">
-										{comment.author?.bash_name || comment.author?.christian_name}
-									</span>
-									<span class="text-xs text-gray-600">{timeAgo(comment.created_at)}</span>
-									{#if comment.updated_at}
-										<span class="text-xs text-gray-600">(edited)</span>
-									{/if}
-								</div>
-								<p class="mt-1 text-sm text-gray-300">
-									{@html highlightMentions(comment.body, currentUserNames)}
-								</p>
+		{#snippet commentContent(comment: typeof data.comments[0], isTopLevel: boolean)}
+			<div
+				id="comment-{comment.id}"
+				class="rounded-lg border border-gray-800 p-3 transition-colors duration-1000 {highlightedCommentId ===
+				comment.id
+					? 'border-blue-500 bg-blue-900/20'
+					: 'bg-gray-900'}"
+			>
+				{#if comment.is_deleted}
+					<p class="text-sm text-gray-600 italic">This comment was deleted.</p>
+				{:else}
+					<div class="flex items-start gap-3">
+						<Avatar profile={comment.author} size="sm" />
+						<div class="min-w-0 flex-1">
+							<div class="flex items-center gap-2">
+								<span class="text-sm font-medium text-gray-200">
+									{comment.author?.bash_name || comment.author?.christian_name}
+								</span>
+								<span class="text-xs text-gray-600">{timeAgo(comment.created_at)}</span>
+								{#if comment.updated_at}
+									<span class="text-xs text-gray-600">(edited)</span>
+								{/if}
+							</div>
+							<p class="mt-1 text-sm text-gray-300">
+								{@html highlightMentions(comment.body, currentUserNames)}
+							</p>
 
-								<!-- Reactions display -->
-								<div class="mt-2 flex flex-wrap items-center gap-1">
-									{#each groupReactions(comment.reactions) as [emoji, { count, userReacted }]}
-										<form method="POST" action="?/react" use:enhance>
-											<input type="hidden" name="comment_id" value={comment.id} />
-											<input type="hidden" name="emoji" value={emoji} />
-											<button
-												type="submit"
-												class="rounded-full px-2 py-0.5 text-sm transition {userReacted
-													? 'bg-blue-600/30 ring-1 ring-blue-500'
-													: 'bg-gray-800 hover:bg-gray-700'}"
+							<!-- Reactions display -->
+							<div class="mt-2 flex flex-wrap items-center gap-1">
+								{#each groupReactions(comment.reactions) as [emoji, { count, userReacted }]}
+									<form method="POST" action="?/react" use:enhance>
+										<input type="hidden" name="comment_id" value={comment.id} />
+										<input type="hidden" name="emoji" value={emoji} />
+										<button
+											type="submit"
+											class="rounded-full px-2 py-0.5 text-sm transition {userReacted
+												? 'bg-blue-600/30 ring-1 ring-blue-500'
+												: 'bg-gray-800 hover:bg-gray-700'}"
+										>
+											{emoji}
+											{count}
+										</button>
+									</form>
+								{/each}
+
+								<!-- Add reaction button -->
+								{#if data.session}
+									<div class="relative">
+										<button
+											type="button"
+											onclick={() =>
+												(showReactionPicker =
+													showReactionPicker === comment.id ? null : comment.id)}
+											class="rounded-full bg-gray-800 px-2 py-0.5 text-sm text-gray-500 hover:bg-gray-700 hover:text-gray-400"
+										>
+											😀+
+										</button>
+										{#if showReactionPicker === comment.id}
+											<div
+												class="absolute bottom-full left-0 z-10 mb-1 flex gap-1 rounded-lg border border-gray-700 bg-gray-800 p-2 shadow-lg"
 											>
-												{emoji}
-												{count}
+												{#each reactionEmojis as emoji}
+													<form
+														method="POST"
+														action="?/react"
+														use:enhance={() => {
+															showReactionPicker = null;
+															return async ({ update }) => {
+																update();
+															};
+														}}
+													>
+														<input type="hidden" name="comment_id" value={comment.id} />
+														<input type="hidden" name="emoji" value={emoji} />
+														<button type="submit" class="rounded p-1 text-lg hover:bg-gray-700">
+															{emoji}
+														</button>
+													</form>
+												{/each}
+											</div>
+										{/if}
+									</div>
+								{/if}
+
+								<!-- Reply button -->
+								{#if data.session && !comment.is_deleted}
+									<button
+										onclick={() => {
+											const threadId = isTopLevel ? comment.id : comment.parent_id;
+											replyingTo = replyingTo === threadId ? null : threadId;
+											replyBody = '';
+										}}
+										class="ml-1 text-xs text-gray-500 hover:text-gray-400"
+									>
+										Reply
+									</button>
+								{/if}
+
+								<!-- Delete button -->
+								{#if data.user?.id === comment.user_id || (data.profile && ['moderator', 'admin'].includes(data.profile.role))}
+									{#if confirmingDeleteComment === comment.id}
+										<form method="POST" action="?/deleteComment" use:enhance>
+											<input type="hidden" name="comment_id" value={comment.id} />
+											<button type="submit" class="ml-2 text-xs text-red-400 hover:text-red-300">
+												Confirm delete
 											</button>
 										</form>
-									{/each}
-
-									<!-- Add reaction button -->
-									{#if data.session}
-										<div class="relative">
-											<button
-												type="button"
-												onclick={() =>
-													(showReactionPicker =
-														showReactionPicker === comment.id ? null : comment.id)}
-												class="rounded-full bg-gray-800 px-2 py-0.5 text-sm text-gray-500 hover:bg-gray-700 hover:text-gray-400"
-											>
-												😀+
-											</button>
-											{#if showReactionPicker === comment.id}
-												<div
-													class="absolute bottom-full left-0 z-10 mb-1 flex gap-1 rounded-lg border border-gray-700 bg-gray-800 p-2 shadow-lg"
-												>
-													{#each reactionEmojis as emoji}
-														<form
-															method="POST"
-															action="?/react"
-															use:enhance={() => {
-																showReactionPicker = null;
-																return async ({ update }) => {
-																	update();
-																};
-															}}
-														>
-															<input type="hidden" name="comment_id" value={comment.id} />
-															<input type="hidden" name="emoji" value={emoji} />
-															<button type="submit" class="rounded p-1 text-lg hover:bg-gray-700">
-																{emoji}
-															</button>
-														</form>
-													{/each}
-												</div>
-											{/if}
-										</div>
+										<button
+											onclick={() => (confirmingDeleteComment = null)}
+											class="text-xs text-gray-500 hover:text-gray-400"
+										>
+											Cancel
+										</button>
+									{:else}
+										<button
+											onclick={() => (confirmingDeleteComment = comment.id)}
+											class="ml-2 text-xs text-gray-500 hover:text-gray-400"
+										>
+											{data.user?.id !== comment.user_id ? 'Delete (admin)' : 'Delete'}
+										</button>
 									{/if}
-
-									<!-- Delete button -->
-									{#if data.user?.id === comment.user_id || (data.profile && ['moderator', 'admin'].includes(data.profile.role))}
-										{#if confirmingDeleteComment === comment.id}
-											<form method="POST" action="?/deleteComment" use:enhance>
-												<input type="hidden" name="comment_id" value={comment.id} />
-												<button type="submit" class="ml-2 text-xs text-red-400 hover:text-red-300">
-													Confirm delete
-												</button>
-											</form>
-											<button
-												onclick={() => (confirmingDeleteComment = null)}
-												class="text-xs text-gray-500 hover:text-gray-400"
-											>
-												Cancel
-											</button>
-										{:else}
-											<button
-												onclick={() => (confirmingDeleteComment = comment.id)}
-												class="ml-2 text-xs text-gray-500 hover:text-gray-400"
-											>
-												{data.user?.id !== comment.user_id ? 'Delete (admin)' : 'Delete'}
-											</button>
-										{/if}
-									{/if}
-								</div>
+								{/if}
 							</div>
 						</div>
-					{/if}
-				</div>
+					</div>
+				{/if}
+			</div>
+		{/snippet}
+
+		<div class="space-y-4">
+			{#each topLevelComments as comment}
+				{@render commentContent(comment, true)}
+
+				<!-- Replies -->
+				{@const replies = repliesByParent().get(comment.id) ?? []}
+				{#if replies.length > 0}
+					{@const expanded = expandedThreads.has(comment.id)}
+					{@const visibleReplies = expanded ? replies : replies.slice(0, 3)}
+					<div class="ml-8 space-y-2 border-l-2 border-gray-800 pl-4">
+						{#each visibleReplies as reply}
+							{@render commentContent(reply, false)}
+						{/each}
+						{#if replies.length > 3 && !expanded}
+							<button
+								onclick={() => {
+									const next = new Set(expandedThreads);
+									next.add(comment.id);
+									expandedThreads = next;
+								}}
+								class="text-xs text-blue-400 hover:text-blue-300"
+							>
+								Show {replies.length - 3} more {replies.length - 3 === 1 ? 'reply' : 'replies'}
+							</button>
+						{/if}
+					</div>
+				{/if}
+
+				<!-- Inline reply form -->
+				{#if replyingTo === comment.id}
+					<div class="ml-8 border-l-2 border-gray-800 pl-4">
+						<form
+							method="POST"
+							action="?/comment"
+							use:enhance={() => {
+								submittingReply = true;
+								return async ({ update }) => {
+									replyBody = '';
+									replyingTo = null;
+									submittingReply = false;
+									update();
+								};
+							}}
+						>
+							<input type="hidden" name="parent_id" value={comment.id} />
+							<div class="flex gap-3">
+								<Avatar profile={data.profile} size="sm" />
+								<div class="flex-1">
+									<MentionInput
+										bind:value={replyBody}
+										name="body"
+										placeholder="Write a reply..."
+										members={data.members}
+									/>
+								</div>
+							</div>
+							<div class="mt-2 flex justify-end gap-2">
+								<button
+									type="button"
+									onclick={() => {
+										replyingTo = null;
+										replyBody = '';
+									}}
+									class="rounded-md px-3 py-1.5 text-sm text-gray-400 hover:text-gray-300"
+								>
+									Cancel
+								</button>
+								<button
+									type="submit"
+									disabled={submittingReply || !replyBody.trim()}
+									class="rounded-md bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+								>
+									{submittingReply ? 'Posting...' : 'Reply'}
+								</button>
+							</div>
+						</form>
+					</div>
+				{/if}
 			{/each}
 		</div>
 
-		<!-- Post comment -->
+		<!-- Post top-level comment -->
 		{#if data.session}
 			<form
 				method="POST"

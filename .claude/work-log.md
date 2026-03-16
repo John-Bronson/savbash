@@ -4,6 +4,30 @@ A record of everything done during development, so you can review and learn from
 
 ---
 
+## 2026-03-16 — Single-Level Threaded Comments
+
+Added single-level comment threading to ride discussions. Replies appear indented under their parent comment with a left border. No nesting beyond one level — replies to replies attach to the top-level parent (resolved server-side).
+
+**Files created:**
+- `supabase/migrations/20260316000000_add_comment_threading.sql` — adds `parent_id` column with FK to comments, partial index
+
+**Files modified:**
+- `src/lib/database.types.ts` — added `parent_id: string | null` to comments Row/Insert/Update
+- `src/routes/rides/[id]/+page.server.ts` — comment action reads `parent_id` from form data, resolves reply-to-reply to top-level parent
+- `src/routes/rides/[id]/+page.svelte` — major template restructure:
+  - Extracted `{#snippet commentContent()}` to share markup between top-level and reply comments
+  - Derived `topLevelComments` and `repliesByParent` Map for thread grouping
+  - Reply button opens inline form under the thread
+  - Collapse: shows first 3 replies, "Show N more" to expand
+  - Reply form includes hidden `parent_id` input
+
+**Key decisions:**
+- No DB-level nesting constraint — server resolves parent chain in the action
+- `expandedThreads` uses a Set with immutable updates for Svelte 5 reactivity
+- `repliesByParent` is a derived function (called with `()`) to avoid stale closures
+
+---
+
 ## Session 1 — 2026-03-08: Database Schema Design
 
 ### What we did

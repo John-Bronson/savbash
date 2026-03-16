@@ -109,10 +109,23 @@ export const actions: Actions = {
 
 		if (!body) return fail(400, { message: 'Comment cannot be empty' });
 
+		// Resolve parent_id: if replying to a reply, attach to the top-level parent
+		let parentId: string | null = (formData.get('parent_id') as string) || null;
+		if (parentId) {
+			const { data: parentComment } = await locals.supabase
+				.from('comments')
+				.select('parent_id')
+				.eq('id', parentId)
+				.single();
+			if (parentComment?.parent_id) {
+				parentId = parentComment.parent_id;
+			}
+		}
+
 		// Insert comment
 		const { data: comment, error: commentError } = await locals.supabase
 			.from('comments')
-			.insert({ ride_id: params.id, user_id: locals.user.id, body })
+			.insert({ ride_id: params.id, user_id: locals.user.id, body, parent_id: parentId })
 			.select('id')
 			.single();
 
