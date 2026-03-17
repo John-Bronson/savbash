@@ -1,5 +1,5 @@
 import { error, fail } from '@sveltejs/kit';
-import { sendMentionNotification } from '$lib/email';
+import { sendMentionNotification, sendErrorNotification } from '$lib/email';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -144,7 +144,7 @@ export const actions: Actions = {
 		} catch {
 			console.warn('Failed to parse mention_ids:', mentionIdsRaw);
 		}
-		console.log('Mention IDs from form:', mentionIds);
+		let mentionError = false;
 
 		if (mentionIds.length > 0) {
 			const mentionRows: { comment_id: string; mentioned_user_id: string; ride_id: string }[] = [];
@@ -189,55 +189,83 @@ export const actions: Actions = {
 			);
 
 			if (unique.length > 0) {
-				await locals.supabase.from('mentions').insert(unique);
+				const { error: mentionInsertError } = await locals.supabase
+					.from('mentions')
+					.insert(unique);
 
-				// Send mention notification emails (fire and forget)
-				const commenterName =
-					locals.profile?.bash_name || locals.profile?.christian_name || 'Someone';
+				if (mentionInsertError) {
+					console.error('Failed to insert mentions:', mentionInsertError);
+					mentionError = true;
 
-				// Get the ride title
-				const { data: ride } = await locals.supabase
-					.from('rides')
-					.select('title')
-					.eq('id', params.id)
-					.single();
+					// Fetch admin emails and notify (fire-and-forget)
+					const { data: setting } = await locals.supabase
+						.from('site_settings')
+						.select('value')
+						.eq('key', 'signup_notification_emails')
+						.single();
+					const adminEmails: string[] = Array.isArray(setting?.value)
+						? (setting.value as string[])
+						: [];
+					sendErrorNotification({
+						subject: 'Mention insert failed',
+						details: `Comment ${comment.id} on ride ${params.id}\n${mentionInsertError.message}`,
+						adminEmails
+					});
+				} else {
+					// Send mention notification emails
+					const commenterName =
+						locals.profile?.bash_name || locals.profile?.christian_name || 'Someone';
 
-				// Get mentioned users' emails and preferences
-				const mentionedIds = unique.map((r) => r.mentioned_user_id);
-				const { data: mentionedProfiles } = await locals.supabase
-					.from('profiles')
-					.select('id, email, notify_on_mention')
-					.in('id', mentionedIds);
+					const { data: ride } = await locals.supabase
+						.from('rides')
+						.select('title')
+						.eq('id', params.id)
+						.single();
 
-				if (mentionedProfiles && ride) {
-					console.log(
-						'Processing mentions:',
-						mentionedProfiles.map((p) => ({
-							id: p.id,
-							notify: p.notify_on_mention,
-							hasEmail: !!p.email
-						}))
-					);
-					for (const mp of mentionedProfiles) {
-						if (mp.notify_on_mention && mp.email) {
-							console.log('Sending mention email to:', mp.email);
-							await sendMentionNotification({
-								mentionedEmail: mp.email,
-								mentionerName: commenterName,
-								commentBody: body,
-								rideTitle: ride.title,
-								rideId: params.id,
-								commentId: comment.id
-							});
+					const mentionedIds = unique.map((r) => r.mentioned_user_id);
+					const { data: mentionedProfiles } = await locals.supabase
+						.from('profiles')
+						.select('id, email, notify_on_mention')
+						.in('id', mentionedIds);
+
+					if (mentionedProfiles && ride) {
+						// Fetch admin emails once for potential error notifications
+						const { data: setting } = await locals.supabase
+							.from('site_settings')
+							.select('value')
+							.eq('key', 'signup_notification_emails')
+							.single();
+						const adminEmails: string[] = Array.isArray(setting?.value)
+							? (setting.value as string[])
+							: [];
+
+						for (const mp of mentionedProfiles) {
+							if (mp.notify_on_mention && mp.email) {
+								try {
+									await sendMentionNotification({
+										mentionedEmail: mp.email,
+										mentionerName: commenterName,
+										commentBody: body,
+										rideTitle: ride.title,
+										rideId: params.id,
+										commentId: comment.id
+									});
+								} catch (emailErr) {
+									console.error('Failed to send mention email:', emailErr);
+									sendErrorNotification({
+										subject: 'Mention email delivery failed',
+										details: `Failed sending to ${mp.email} for comment ${comment.id}\n${emailErr instanceof Error ? emailErr.message : String(emailErr)}`,
+										adminEmails
+									});
+								}
+							}
 						}
 					}
-				} else {
-					console.warn('No mentioned profiles or ride found:', { mentionedProfiles, ride });
 				}
 			}
 		}
 
-		return { commented: true };
+		return { commented: true, mentionError };
 	},
 
 	deleteComment: async ({ request, locals }) => {

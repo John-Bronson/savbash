@@ -997,3 +997,35 @@ Note: The members page approve action had already been fixed with the same `.may
 - `src/routes/rides/[id]/+page.server.ts` — multi-upload action, photo reactions action, caption editing action, expanded photo query
 - `src/routes/rides/[id]/+page.svelte` — multi-upload form, photo reaction overlays/picker, inline caption editing, updated lightbox
 - `src/routes/+layout.svelte` — Photos nav link
+
+---
+
+## Session: Harden In-App Mention Notifications (2026-03-17)
+
+### What we did
+
+Hardened the mention notification system to prevent silent failures and stale UI state.
+
+1. **Added `sendErrorNotification` helper** (`src/lib/email.ts`) — New function that sends error alert emails to configured admin addresses (from `signup_notification_emails` in `site_settings`). Accepts `subject`, `details`, and `adminEmails` params. Uses the existing `emailWrapper` styling with a red accent.
+
+2. **Fixed mention insert error handling** (`rides/[id]/+page.server.ts`) — The mention `.insert()` call now captures `{ error }`. On failure: logs the error, sets `mentionError = true` in the form result, and fire-and-forgets an admin error notification email. The comment still posts successfully.
+
+3. **Wrapped email sending in try/catch** (`rides/[id]/+page.server.ts`) — Each `sendMentionNotification` call is now wrapped in try/catch. On failure, logs the error and sends an admin notification so failed email delivery is visible.
+
+4. **Handled deleted/null comments in notifications UI** (`notifications/+page.svelte`) — Added null guards for `mention.comment`, `mention.ride`, and `mention.comment.is_deleted`. Deleted or missing comments show "This comment was deleted" in muted text with a placeholder avatar, without linking to the ride. Added `is_deleted` to the notifications query.
+
+5. **Invalidated layout after mark-all-read** (`notifications/+page.svelte`) — Added `invalidateAll()` in the `use:enhance` callback after the markAllRead action returns, so the layout's bell count updates immediately.
+
+6. **Invalidated layout on ride visit from notification** (`rides/[id]/+page.svelte`) — When the URL has a `#comment-` hash (user came from notification link), calls `invalidateAll()` on mount to re-run the layout load and update the bell count after mentions are marked read.
+
+7. **Added mention error warning banner** (`rides/[id]/+page.svelte`) — Shows a yellow warning when `form?.mentionError` is true: "Your comment was posted but mentions may not have been sent."
+
+8. **Removed stale console.log statements** (`rides/[id]/+page.server.ts`) — Removed debug logs for mention IDs, processing mentions, and sending emails.
+
+### Files modified
+
+- `src/lib/email.ts` — added `sendErrorNotification()` helper
+- `src/routes/rides/[id]/+page.server.ts` — mention insert error handling, email try/catch, removed console.logs
+- `src/routes/rides/[id]/+page.svelte` — mention error warning banner, invalidateAll on notification-linked visit
+- `src/routes/notifications/+page.svelte` — null guards, deleted comment handling, invalidateAll after mark-all-read
+- `src/routes/notifications/+page.server.ts` — added `is_deleted` to comment query

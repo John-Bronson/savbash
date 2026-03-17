@@ -213,6 +213,38 @@ ${escapeHtml(email)}
 	}
 }
 
+export async function sendErrorNotification({
+	subject,
+	details,
+	adminEmails
+}: {
+	subject: string;
+	details: string;
+	adminEmails: string[];
+}) {
+	if (!env.RESEND_API_KEY) return;
+	if (adminEmails.length === 0) return;
+
+	const html = emailWrapper(`
+<h2 style="margin:0 0 16px;color:#f87171;font-size:18px">Error Alert</h2>
+<p style="margin:0 0 8px;color:#d1d5db;font-size:14px;font-weight:600">${escapeHtml(subject)}</p>
+<div style="background:#111827;border-radius:8px;padding:12px 16px;margin:16px 0;border-left:3px solid #f87171">
+<pre style="margin:0;color:#d1d5db;font-size:13px;white-space:pre-wrap;word-break:break-word">${escapeHtml(details)}</pre>
+</div>
+`);
+
+	try {
+		await getResend().emails.send({
+			from: FROM,
+			to: adminEmails,
+			subject: `[SavBash Error] ${subject}`,
+			html
+		});
+	} catch (err) {
+		console.error('Failed to send error notification email:', err);
+	}
+}
+
 function escapeHtml(str: string): string {
 	return str
 		.replace(/&/g, '&amp;')

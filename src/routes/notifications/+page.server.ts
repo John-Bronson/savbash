@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.select(
 			`
 			*,
-			comment:comments!comment_id(body, user_id, author:profiles!user_id(christian_name, bash_name, avatar_url, avatar_emoji)),
+			comment:comments!comment_id(body, user_id, is_deleted, author:profiles!user_id(christian_name, bash_name, avatar_url, avatar_emoji)),
 			ride:rides!ride_id(id, title)
 		`
 		)

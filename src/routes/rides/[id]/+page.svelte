@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { marked } from 'marked';
 	import { onMount } from 'svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
@@ -135,6 +135,8 @@
 			setTimeout(() => {
 				highlightedCommentId = null;
 			}, 3000);
+			// Re-run layout load to update bell count after mentions were marked read
+			invalidateAll();
 		}
 	});
 </script>
@@ -161,6 +163,12 @@
 	<div class="mb-6">
 		<a href="/" class="text-sm text-gray-500 hover:text-gray-400">&larr; Back to rides</a>
 	</div>
+
+	{#if form?.mentionError}
+		<div class="mb-4 rounded-lg border border-yellow-700 bg-yellow-900/30 px-4 py-3 text-sm text-yellow-300">
+			Your comment was posted but mentions may not have been sent. Please try mentioning again or notify the person directly.
+		</div>
+	{/if}
 
 	<!-- Banner Image -->
 	{#if data.ride.image_url}
