@@ -910,3 +910,22 @@ Replaced the plain `<textarea>` in `MentionInput.svelte` with a `contenteditable
 - `src/hooks.server.ts` — block disabled users same as pending
 - `src/routes/members/+page.server.ts` — added `disable` action, added `'pending'` to `changeRole` valid roles
 - `src/routes/members/+page.svelte` — Disable button, disabled badge style, collapsible disabled section with Restore
+
+---
+
+## Fix Email Issues: Duplicate Approvals + Delivery Delayed (2026-03-17)
+
+Fixed three email-related bugs:
+
+1. **Duplicate approval emails from rides page** — The approve action in `rides/+page.server.ts` had a two-step update-then-fetch pattern. If clicked multiple times, the fetch would always return the user (even after already approved), sending duplicate emails. Combined into a single `.update().eq('role', 'pending').select().maybeSingle()` query so the email only sends when a row is actually changed from pending to user.
+
+2. **Admin signup notifications showing "Delivery Delayed"** — `sendSignupNotification` was sending `to: FROM` (admin@savbash.com, a non-existent mailbox) with admins in BCC. Changed to `to: notifyEmails` so admins receive directly.
+
+3. **Ride announcements same issue** — `sendRideAnnouncement` also sent `to: FROM`. Changed to `to: emails[0], bcc: emails.slice(1)` so the first subscriber is the `to:` recipient (real deliverable address) and the rest stay hidden via BCC.
+
+Note: The members page approve action had already been fixed with the same `.maybeSingle()` pattern prior to this session.
+
+### Files modified
+
+- `src/routes/rides/+page.server.ts` — combined approve update+select into one query with `.maybeSingle()`
+- `src/lib/email.ts` — fixed `to` field in `sendSignupNotification` and `sendRideAnnouncement`

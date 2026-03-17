@@ -57,21 +57,17 @@ export const actions: Actions = {
 
 		if (!userId) return fail(400, { message: 'Missing user ID' });
 
-		const { error } = await locals.supabase
+		const { data: approvedUser, error } = await locals.supabase
 			.from('profiles')
 			.update({ role: 'user' })
 			.eq('id', userId)
-			.eq('role', 'pending');
+			.eq('role', 'pending')
+			.select('email, christian_name')
+			.maybeSingle();
 
 		if (error) {
 			return fail(500, { message: 'Failed to approve user' });
 		}
-
-		const { data: approvedUser } = await locals.supabase
-			.from('profiles')
-			.select('email, christian_name')
-			.eq('id', userId)
-			.single();
 
 		if (approvedUser?.email) {
 			sendApprovalNotification({

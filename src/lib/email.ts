@@ -87,8 +87,8 @@ ${descPreview ? `<p style="margin:16px 0 0;color:#d1d5db;font-size:14px">${escap
 	try {
 		const result = await getResend().emails.send({
 			from: FROM,
-			to: FROM,
-			bcc: emails,
+			to: emails[0],
+			bcc: emails.slice(1),
 			subject: `New Ride: ${ride.title}`,
 			html
 		});
@@ -203,8 +203,7 @@ ${escapeHtml(email)}
 	try {
 		const result = await getResend().emails.send({
 			from: FROM,
-			to: FROM,
-			bcc: notifyEmails,
+			to: notifyEmails,
 			subject: `New signup pending approval: ${email}`,
 			html
 		});
