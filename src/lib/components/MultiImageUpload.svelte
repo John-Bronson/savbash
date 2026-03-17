@@ -31,7 +31,8 @@
 	);
 	const uploading = $derived(files.some((f) => f.status === 'uploading' || f.status === 'queued'));
 
-	async function resizeAndUpload(file: File, entry: FileEntry) {
+	async function resizeAndUpload(file: File, entryId: string) {
+		const entry = files.find((f) => f.id === entryId)!;
 		try {
 			entry.status = 'uploading';
 			entry.progress = 0;
@@ -111,7 +112,7 @@
 			currentIndex = i + 1;
 			const entry = newEntries[i];
 			const file = fileMap.get(entry.id)!;
-			await resizeAndUpload(file, entry);
+			await resizeAndUpload(file, newEntries[i].id);
 		}
 	}
 
