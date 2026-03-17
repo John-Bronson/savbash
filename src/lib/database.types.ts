@@ -224,6 +224,45 @@ export type Database = {
 					}
 				];
 			};
+			photo_reactions: {
+				Row: {
+					created_at: string;
+					emoji: string;
+					id: string;
+					photo_id: string;
+					user_id: string;
+				};
+				Insert: {
+					created_at?: string;
+					emoji: string;
+					id?: string;
+					photo_id: string;
+					user_id: string;
+				};
+				Update: {
+					created_at?: string;
+					emoji?: string;
+					id?: string;
+					photo_id?: string;
+					user_id?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'photo_reactions_photo_id_fkey';
+						columns: ['photo_id'];
+						isOneToOne: false;
+						referencedRelation: 'ride_photos';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'photo_reactions_user_id_fkey';
+						columns: ['user_id'];
+						isOneToOne: false;
+						referencedRelation: 'profiles';
+						referencedColumns: ['id'];
+					}
+				];
+			};
 			ride_hares: {
 				Row: {
 					created_at: string;
@@ -306,35 +345,35 @@ export type Database = {
 				];
 			};
 			site_settings: {
-			Row: {
-				key: string;
-				value: Json;
-				updated_at: string;
-				updated_by: string | null;
+				Row: {
+					key: string;
+					value: Json;
+					updated_at: string;
+					updated_by: string | null;
+				};
+				Insert: {
+					key: string;
+					value?: Json;
+					updated_at?: string;
+					updated_by?: string | null;
+				};
+				Update: {
+					key?: string;
+					value?: Json;
+					updated_at?: string;
+					updated_by?: string | null;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'site_settings_updated_by_fkey';
+						columns: ['updated_by'];
+						isOneToOne: false;
+						referencedRelation: 'profiles';
+						referencedColumns: ['id'];
+					}
+				];
 			};
-			Insert: {
-				key: string;
-				value?: Json;
-				updated_at?: string;
-				updated_by?: string | null;
-			};
-			Update: {
-				key?: string;
-				value?: Json;
-				updated_at?: string;
-				updated_by?: string | null;
-			};
-			Relationships: [
-				{
-					foreignKeyName: 'site_settings_updated_by_fkey';
-					columns: ['updated_by'];
-					isOneToOne: false;
-					referencedRelation: 'profiles';
-					referencedColumns: ['id'];
-				}
-			];
-		};
-		rides: {
+			rides: {
 				Row: {
 					created_at: string;
 					created_by: string;

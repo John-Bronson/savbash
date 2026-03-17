@@ -929,3 +929,71 @@ Note: The members page approve action had already been fixed with the same `.may
 
 - `src/routes/rides/+page.server.ts` — combined approve update+select into one query with `.maybeSingle()`
 - `src/lib/email.ts` — fixed `to` field in `sendSignupNotification` and `sendRideAnnouncement`
+
+---
+
+## Session: 2026-03-17 — Photo System Upgrade: Multi-upload, Reactions, Photos Page
+
+### What we did
+
+1. **Database migration for photo reactions** (`supabase/migrations/20260317000000_photo_reactions.sql`)
+   - New `photo_reactions` table: `photo_id`, `user_id`, `emoji` with unique constraint per user per photo
+   - RLS policies matching the comment reactions pattern (public read, authenticated insert/update/delete)
+   - Updated `src/lib/database.types.ts` with the new table types
+
+2. **Built `MultiImageUpload.svelte` component** (`src/lib/components/MultiImageUpload.svelte`)
+   - Accepts `bucket`, `pathPrefix`, `maxWidth` props, `values: string[]` via `$bindable`
+   - `<input type="file" accept="image/*" multiple>` for iPhone multi-select
+   - Per-file upload status tracking: uploading spinner overlay, error state, remove button
+   - Concurrency-limited to 3 simultaneous uploads to avoid memory pressure
+   - Thumbnail preview grid (3 cols mobile, 4 cols desktop) with "Add more photos" after initial batch
+   - Hidden `<input name="photo_urls">` serializes URLs as JSON array
+   - Reuses the same resize-to-WebP logic from `ImageUpload.svelte`
+
+3. **Wired multi-upload into ride detail page**
+   - Replaced `ImageUpload` with `MultiImageUpload` in the photo upload section
+   - Removed caption input from upload form (captions added post-upload via inline editing)
+   - Submit button shows count: "Add 3 Photos"
+   - `uploadPhoto` server action now parses `photo_urls` JSON array, bulk inserts rows
+
+4. **Added inline caption editing on photos**
+   - Clicking caption text (or "+ caption" link) on your own photo opens an inline text input
+   - New `updatePhotoCaption` server action — checks ownership or mod status before updating
+   - Non-owners/non-mods see captions as static text
+
+5. **Added photo reactions**
+   - New `reactPhoto` server action — same toggle/replace/insert logic as comment `react`
+   - Photo query expanded to include `photo_reactions(id, user_id, emoji)` via Supabase join
+   - Reaction badges overlaid in bottom-left corner of photo thumbnails (semi-transparent backdrop)
+   - Emoji picker appears on hover (bottom-right "+") with the same 7 emoji set as comments
+   - Lightbox also shows reactions with full emoji picker for logged-in users
+   - Reuses existing `groupReactions()` function (same data shape)
+
+6. **Built `/photos` page with infinite scroll**
+   - `src/routes/photos/+page.server.ts` — loads first 5 rides with photos, keyset pagination by `ride_date`
+   - `src/routes/photos/api/+server.ts` — GET endpoint for subsequent batches
+   - `src/routes/photos/+page.svelte` — grouped by ride with title/date/link headers, photo grid with reaction overlays, `IntersectionObserver` sentinel for infinite scroll, lightbox
+   - Loading spinner while fetching, "No more photos" when exhausted
+
+7. **Added "Photos" nav link** in `+layout.svelte` between Members and Admin
+
+### Key concepts introduced
+
+- **Concurrency-limited uploads** — A worker pool pattern limits parallel uploads to 3 at a time, preventing memory exhaustion when resizing many large iPhone photos simultaneously
+- **Keyset pagination** — Instead of offset-based pagination (`LIMIT 10 OFFSET 20`), uses the last item's `ride_date` as a cursor. More efficient and avoids skipped/duplicated items when new data is inserted.
+- **IntersectionObserver for infinite scroll** — A 1px sentinel div at the bottom of the list triggers fetching the next batch when it enters the viewport (with 200px rootMargin for pre-fetching)
+
+### Files created
+
+- `supabase/migrations/20260317000000_photo_reactions.sql`
+- `src/lib/components/MultiImageUpload.svelte`
+- `src/routes/photos/+page.server.ts`
+- `src/routes/photos/+page.svelte`
+- `src/routes/photos/api/+server.ts`
+
+### Files modified
+
+- `src/lib/database.types.ts` — added `photo_reactions` table types
+- `src/routes/rides/[id]/+page.server.ts` — multi-upload action, photo reactions action, caption editing action, expanded photo query
+- `src/routes/rides/[id]/+page.svelte` — multi-upload form, photo reaction overlays/picker, inline caption editing, updated lightbox
+- `src/routes/+layout.svelte` — Photos nav link

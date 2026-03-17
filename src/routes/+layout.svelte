@@ -27,6 +27,7 @@
 				{#if data.profile && data.profile.role !== 'pending'}
 					<a href="/rides" class="text-sm text-gray-400 hover:text-gray-200">Rides</a>
 					<a href="/members" class="text-sm text-gray-400 hover:text-gray-200">Members</a>
+					<a href="/photos" class="text-sm text-gray-400 hover:text-gray-200">Photos</a>
 					{#if data.profile?.role === 'admin'}
 						<a href="/admin" class="text-sm text-gray-400 hover:text-gray-200">Admin</a>
 					{/if}
@@ -37,15 +38,15 @@
 					<span class="hidden text-sm text-gray-400 sm:inline"></span>
 				</a>
 				{#if data.unreadMentionCount > 0}
-				<a href="/notifications" class="relative text-gray-400 hover:text-gray-200">
-					<span class="text-lg">🔔</span>
+					<a href="/notifications" class="relative text-gray-400 hover:text-gray-200">
+						<span class="text-lg">🔔</span>
 						<span
 							class="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white"
 						>
 							{data.unreadMentionCount}
 						</span>
-				</a>
-					{/if}
+					</a>
+				{/if}
 				<button onclick={signOut} class="cursor-pointer text-sm text-gray-400 hover:text-gray-200">
 					Sign Out
 				</button>

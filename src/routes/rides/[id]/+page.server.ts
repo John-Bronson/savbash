@@ -19,10 +19,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	if (!ride) error(404, 'Ride not found');
 
-	// Fetch photos
+	// Fetch photos with reactions
 	const { data: photos } = await locals.supabase
 		.from('ride_photos')
-		.select('*, uploader:profiles!user_id(christian_name, bash_name)')
+		.select(
+			'*, uploader:profiles!user_id(christian_name, bash_name), photo_reactions(id, user_id, emoji)'
+		)
 		.eq('ride_id', params.id)
 		.order('created_at', { ascending: true });
 
@@ -208,7 +210,14 @@ export const actions: Actions = {
 					.in('id', mentionedIds);
 
 				if (mentionedProfiles && ride) {
-					console.log('Processing mentions:', mentionedProfiles.map((p) => ({ id: p.id, notify: p.notify_on_mention, hasEmail: !!p.email })));
+					console.log(
+						'Processing mentions:',
+						mentionedProfiles.map((p) => ({
+							id: p.id,
+							notify: p.notify_on_mention,
+							hasEmail: !!p.email
+						}))
+					);
 					for (const mp of mentionedProfiles) {
 						if (mp.notify_on_mention && mp.email) {
 							console.log('Sending mention email to:', mp.email);
@@ -287,19 +296,32 @@ export const actions: Actions = {
 		if (!locals.user) return fail(401, { message: 'Not logged in' });
 
 		const formData = await request.formData();
-		const photoUrl = (formData.get('photo_url') as string)?.trim();
-		const caption = (formData.get('caption') as string)?.trim() || null;
+		const photoUrlsRaw = formData.get('photo_urls') as string;
 
-		if (!photoUrl) return fail(400, { message: 'No photo provided' });
+		let urls: string[] = [];
+		try {
+			const parsed = JSON.parse(photoUrlsRaw || '[]');
+			if (Array.isArray(parsed)) {
+				urls = parsed.filter((u): u is string => typeof u === 'string' && u.trim().length > 0);
+			}
+		} catch {
+			// Fallback: single photo_url field for backwards compat
+			const single = (formData.get('photo_url') as string)?.trim();
+			if (single) urls = [single];
+		}
 
-		const { error: insertError } = await locals.supabase.from('ride_photos').insert({
-			ride_id: params.id,
-			user_id: locals.user.id,
-			photo_url: photoUrl,
-			caption
-		});
+		if (urls.length === 0) return fail(400, { message: 'No photos provided' });
 
-		if (insertError) return fail(500, { message: 'Failed to save photo' });
+		const { error: insertError } = await locals.supabase.from('ride_photos').insert(
+			urls.map((url) => ({
+				ride_id: params.id,
+				user_id: locals.user!.id,
+				photo_url: url,
+				caption: null
+			}))
+		);
+
+		if (insertError) return fail(500, { message: 'Failed to save photos' });
 		return { photoUploaded: true };
 	},
 
@@ -325,6 +347,59 @@ export const actions: Actions = {
 
 		await locals.supabase.from('ride_photos').delete().eq('id', photoId);
 		return { photoDeleted: true };
+	},
+
+	updatePhotoCaption: async ({ request, locals }) => {
+		if (!locals.user) return fail(401, { message: 'Not logged in' });
+
+		const formData = await request.formData();
+		const photoId = formData.get('photo_id') as string;
+		const caption = (formData.get('caption') as string)?.trim() || null;
+
+		const { data: photo } = await locals.supabase
+			.from('ride_photos')
+			.select('user_id')
+			.eq('id', photoId)
+			.single();
+
+		if (!photo) return fail(404, { message: 'Photo not found' });
+
+		const isMod = locals.profile && ['moderator', 'admin'].includes(locals.profile.role);
+		if (photo.user_id !== locals.user.id && !isMod) {
+			return fail(403, { message: 'Not authorized' });
+		}
+
+		await locals.supabase.from('ride_photos').update({ caption }).eq('id', photoId);
+		return { captionUpdated: true };
+	},
+
+	reactPhoto: async ({ request, locals }) => {
+		if (!locals.user) return fail(401, { message: 'Not logged in' });
+
+		const formData = await request.formData();
+		const photoId = formData.get('photo_id') as string;
+		const emoji = formData.get('emoji') as string;
+
+		const { data: existing } = await locals.supabase
+			.from('photo_reactions')
+			.select('id, emoji')
+			.eq('photo_id', photoId)
+			.eq('user_id', locals.user.id)
+			.single();
+
+		if (existing) {
+			if (existing.emoji === emoji) {
+				await locals.supabase.from('photo_reactions').delete().eq('id', existing.id);
+			} else {
+				await locals.supabase.from('photo_reactions').update({ emoji }).eq('id', existing.id);
+			}
+		} else {
+			await locals.supabase
+				.from('photo_reactions')
+				.insert({ photo_id: photoId, user_id: locals.user.id, emoji });
+		}
+
+		return { success: true };
 	},
 
 	deleteRide: async ({ params, locals }) => {
