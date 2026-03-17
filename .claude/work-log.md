@@ -4,6 +4,22 @@ A record of everything done during development, so you can review and learn from
 
 ---
 
+## 2026-03-17 — Fix Multi-Photo Upload: Sequential Uploads + Progress Ring
+
+Fixed multi-photo uploads getting stuck on mobile (parallel workers overwhelming iPhone connections). Replaced concurrent worker queue with sequential one-at-a-time processing, added a 30-second upload timeout, and replaced the spinning indicator with an SVG progress ring showing resize/upload phases and queue position.
+
+**Key changes in `src/lib/components/MultiImageUpload.svelte`:**
+- Added `queued` status to `FileEntry` — files start queued, flip to `uploading` when their turn comes
+- Added `progress` field (0→0.3 after resize→1.0 on upload complete)
+- Replaced `animate-spin` spinner with SVG `<circle>` progress ring using `stroke-dasharray`/`stroke-dashoffset`
+- Progress ring shows current file number inside (e.g. "2/4")
+- Queued files show their position number overlaid on dimmed preview
+- Label shows "Uploading 2 of 5..." instead of generic "Uploading..."
+- `Promise.race` with 30s timeout on `supabase.storage.upload()` — timed-out files get error state, next file proceeds
+- Removed `worker()` function and concurrency limit of 3
+
+---
+
 ## 2026-03-16 — Single-Level Threaded Comments
 
 Added single-level comment threading to ride discussions. Replies appear indented under their parent comment with a left border. No nesting beyond one level — replies to replies attach to the top-level parent (resolved server-side).

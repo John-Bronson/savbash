@@ -14,7 +14,8 @@
 	type FileEntry = {
 		id: string;
 		name: string;
-		status: 'uploading' | 'done' | 'error';
+		status: 'queued' | 'uploading' | 'done' | 'error';
+		progress: number;
 		url: string | null;
 		preview: string | null;
 	};
@@ -22,12 +23,19 @@
 	let files = $state<FileEntry[]>([]);
 	let dragOver = $state(false);
 	let fileInput = $state<HTMLInputElement | null>(null);
+	let currentIndex = $state(0);
+	let totalInBatch = $state(0);
 
-	const allDone = $derived(files.length > 0 && files.every((f) => f.status !== 'uploading'));
-	const uploading = $derived(files.some((f) => f.status === 'uploading'));
+	const allDone = $derived(
+		files.length > 0 && files.every((f) => f.status === 'done' || f.status === 'error')
+	);
+	const uploading = $derived(files.some((f) => f.status === 'uploading' || f.status === 'queued'));
 
 	async function resizeAndUpload(file: File, entry: FileEntry) {
 		try {
+			entry.status = 'uploading';
+			entry.progress = 0;
+
 			const bitmap = await createImageBitmap(file);
 			const scale = Math.min(1, maxWidth / bitmap.width);
 			const w = Math.round(bitmap.width * scale);
@@ -37,15 +45,24 @@
 			ctx.drawImage(bitmap, 0, 0, w, h);
 			const blob = await canvas.convertToBlob({ type: 'image/webp', quality: 0.85 });
 
+			entry.progress = 0.3;
+
 			const { createBrowserClient } = await import('@supabase/ssr');
 			const { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } =
 				await import('$env/static/public');
 			const supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY);
 
 			const path = `${pathPrefix}${entry.id}.webp`;
-			const { error: uploadError } = await supabase.storage
+
+			const uploadPromise = supabase.storage
 				.from(bucket)
 				.upload(path, blob, { upsert: true, contentType: 'image/webp' });
+
+			const timeoutPromise = new Promise<never>((_, reject) =>
+				setTimeout(() => reject(new Error('Upload timed out after 30s')), 30000)
+			);
+
+			const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
 
 			if (uploadError) throw uploadError;
 
@@ -54,6 +71,7 @@
 			} = supabase.storage.from(bucket).getPublicUrl(path);
 
 			entry.url = `${publicUrl}?t=${Date.now()}`;
+			entry.progress = 1;
 			entry.status = 'done';
 		} catch (err) {
 			console.error('Upload failed:', err);
@@ -68,41 +86,33 @@
 
 	async function processFiles(fileList: FileList) {
 		const newEntries: FileEntry[] = [];
+		const fileMap = new Map<string, File>();
+
 		for (const file of fileList) {
 			if (!file.type.startsWith('image/')) continue;
 			const id = crypto.randomUUID();
 			const preview = URL.createObjectURL(file);
-			const entry: FileEntry = { id, name: file.name, status: 'uploading', url: null, preview };
+			const entry: FileEntry = {
+				id,
+				name: file.name,
+				status: 'queued',
+				progress: 0,
+				url: null,
+				preview
+			};
 			newEntries.push(entry);
+			fileMap.set(id, file);
 			files = [...files, entry];
 		}
 
-		// Process with concurrency limit of 3
-		const queue = [...newEntries];
-		const fileMap = new Map<string, File>();
-		let idx = 0;
-		for (const file of fileList) {
-			if (!file.type.startsWith('image/')) continue;
-			fileMap.set(newEntries[idx].id, file);
-			idx++;
-		}
+		totalInBatch = newEntries.length;
 
-		const workers: Promise<void>[] = [];
-		let queueIdx = 0;
-
-		async function worker() {
-			while (queueIdx < queue.length) {
-				const current = queue[queueIdx++];
-				const file = fileMap.get(current.id)!;
-				await resizeAndUpload(file, current);
-			}
+		for (let i = 0; i < newEntries.length; i++) {
+			currentIndex = i + 1;
+			const entry = newEntries[i];
+			const file = fileMap.get(entry.id)!;
+			await resizeAndUpload(file, entry);
 		}
-
-		const concurrency = Math.min(3, queue.length);
-		for (let i = 0; i < concurrency; i++) {
-			workers.push(worker());
-		}
-		await Promise.all(workers);
 	}
 
 	function onFileInput(e: Event) {
@@ -127,6 +137,16 @@
 		files = files.filter((f) => f.id !== id);
 		syncValues();
 	}
+
+	function queuePosition(file: FileEntry): number {
+		const queued = files.filter((f) => f.status === 'queued');
+		return queued.indexOf(file) + 1;
+	}
+
+	function ringOffset(progress: number): number {
+		const circumference = 2 * Math.PI * 18;
+		return circumference * (1 - progress);
+	}
 </script>
 
 <div>
@@ -138,14 +158,49 @@
 						<img
 							src={file.preview}
 							alt={file.name}
-							class="h-full w-full object-cover {file.status === 'uploading' ? 'opacity-50' : ''}"
+							class="h-full w-full object-cover {file.status === 'uploading' || file.status === 'queued' ? 'opacity-50' : ''}"
 						/>
 					{/if}
 					{#if file.status === 'uploading'}
 						<div class="absolute inset-0 flex items-center justify-center bg-black/40">
-							<div
-								class="h-6 w-6 animate-spin rounded-full border-2 border-gray-400 border-t-white"
-							></div>
+							<svg class="h-12 w-12" viewBox="0 0 40 40">
+								<circle
+									cx="20"
+									cy="20"
+									r="18"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+									class="text-gray-700"
+								/>
+								<circle
+									cx="20"
+									cy="20"
+									r="18"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+									stroke-dasharray={2 * Math.PI * 18}
+									stroke-dashoffset={ringOffset(file.progress)}
+									stroke-linecap="round"
+									transform="rotate(-90 20 20)"
+									class="text-blue-400 transition-[stroke-dashoffset] duration-300"
+								/>
+								<text
+									x="20"
+									y="21"
+									text-anchor="middle"
+									dominant-baseline="middle"
+									fill="currentColor"
+									class="text-[9px] font-medium text-gray-200"
+								>
+									{currentIndex}/{totalInBatch}
+								</text>
+							</svg>
+						</div>
+					{:else if file.status === 'queued'}
+						<div class="absolute inset-0 flex items-center justify-center bg-black/40">
+							<span class="text-lg font-semibold text-gray-300">{queuePosition(file)}</span>
 						</div>
 					{:else if file.status === 'error'}
 						<div class="absolute inset-0 flex items-center justify-center bg-red-900/40">
@@ -187,7 +242,7 @@
 		/>
 		<span class="text-gray-400">
 			{#if uploading}
-				Uploading...
+				Uploading {currentIndex} of {totalInBatch}...
 			{:else if files.length > 0}
 				+ Add more photos
 			{:else}
